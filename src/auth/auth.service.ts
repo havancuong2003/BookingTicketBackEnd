@@ -61,8 +61,6 @@ export class AuthService {
   }
 
   async uploadVideo(accessToken: string, videoPath: string) {
-    console.log(accessToken, videoPath);
-
     this.oauth2Client.setCredentials({ access_token: accessToken });
 
     const drive = google.drive({ version: 'v3', auth: this.oauth2Client });

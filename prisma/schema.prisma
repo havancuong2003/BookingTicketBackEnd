@@ -30,26 +30,24 @@ model User{
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
-model Trailer {
-  id        Int      @id @default(autoincrement())
-  trailerUrl String
-  movieId   Int      // Khóa ngoại liên kết với Movie
-  movie     Movie    @relation(fields: [movieId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
+
 model Movie {
   id          Int       @id @default(autoincrement())
-  title       String
-  description String
-  director    String
-  actors      String
-  releaseDate DateTime
-  rating      Float
-  status      String
-  banner      String
-  duration    Int
-  trailers    Trailer[] // Quan hệ 1-nhiều với Trailer
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  title       String?
+  description String?
+  director    String?
+  actors      String?
+  releaseDate DateTime?
+  rating      Float?
+  status      String?
+  banner      String?
+  duration    Int?
+  trailer    String?
+  createdAt   DateTime? @default(now())
+  updatedAt   DateTime? @updatedAt
 }
+
+
+
+
+
