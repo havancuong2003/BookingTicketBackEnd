@@ -54,7 +54,6 @@ export class AuthController {
   ) {
     const authorizationHeader = req.headers['authorization'];
     const accessToken = authorizationHeader?.split(' ')[1];
-    console.log('accessToken: ', accessToken);
 
     // Kiểm tra file upload
     if (!file) {
@@ -66,8 +65,6 @@ export class AuthController {
     const uniqueFileName = this.generateUniqueFileName(file.originalname);
     const filePath = path.join(this.uploadDir, uniqueFileName);
     fs.writeFileSync(filePath, file.buffer);
-
-    console.log('videoPath:', filePath);
 
     if (!accessToken) {
       return {
