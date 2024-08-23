@@ -13,12 +13,43 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
+model Role{
+    id Int @id @default(autoincrement())
+    roleName String @unique
+    user User[]
+}
 model User{
   id Int @id @default(autoincrement())
   email String @unique
   hashPass String
-  firstName String?
-  lastName String?
-
+  fullname String
+  phoneNumber String @unique
+  profileImage String 
+  roleId Int
+  role Role @relation(fields: [roleId],references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model Trailer {
+  id        Int      @id @default(autoincrement())
+  trailerUrl String
+  movieId   Int      // Khóa ngoại liên kết với Movie
+  movie     Movie    @relation(fields: [movieId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model Movie {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String
+  director    String
+  actors      String
+  releaseDate DateTime
+  rating      Float
+  status      String
+  banner      String
+  duration    Int
+  trailers    Trailer[] // Quan hệ 1-nhiều với Trailer
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }

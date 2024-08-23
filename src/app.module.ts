@@ -5,6 +5,7 @@ import { UserController } from './user/user.controller';
 import { UserModule } from './user/user.module';
 import { PrismaService } from './prisma/prisma.service';
 import { PrismaModule } from './prisma/prisma.module';
+import { MovieModule } from './movie/movie.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { PrismaModule } from './prisma/prisma.module';
      AuthModule,
       UserModule,
       PrismaModule,
+      MovieModule,
     ],
   controllers: [UserController],
   providers: [PrismaService],
