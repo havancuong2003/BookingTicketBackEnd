@@ -1,3 +1,4 @@
+import { UserService } from './../user/user.service';
 import { AuthService } from './auth.service';
 import { AuthDto } from './dto';
 
@@ -20,10 +21,16 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import { RoleService } from 'src/role/role.service';
+import { UserDto } from 'src/user/dto/user.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {
+  constructor(
+    private readonly authService: AuthService,
+    private readonly userService: UserService,
+    private readonly roleService: RoleService,
+  ) {
     if (!fs.existsSync(this.uploadDir)) {
       fs.mkdirSync(this.uploadDir, { recursive: true });
     }
@@ -40,6 +47,36 @@ export class AuthController {
   @UseGuards(GoogleOAuthGuard)
   async googleAuthRedirect(@Req() req, @Res() res: Response) {
     const user = req.user;
+    const existingUser = await this.userService.findByEmail(user.email);
+
+    if (existingUser) {
+      // Chỉ cập nhật thông tin nếu có sự thay đổi
+      const updateData: Partial<UserDto> = {};
+      if (existingUser.firstName !== user.firstName)
+        updateData.firstName = user.firstName;
+      if (existingUser.lastName !== user.lastName)
+        updateData.lastName = user.lastName;
+      if (existingUser.picture !== user.picture)
+        updateData.picture = user.picture;
+
+      if (Object.keys(updateData).length > 0) {
+        console.log('update');
+
+        await this.userService.update(existingUser.id, updateData);
+      }
+    } else {
+      // Tạo tài khoản mới nếu không tồn tại
+      const role = await this.roleService.findRole('user');
+      await this.userService.create({
+        email: user.email,
+        hashPass: '', // hoặc bỏ qua nếu không có mật khẩu
+        firstName: user.firstName,
+        lastName: user.lastName,
+        picture: user.picture,
+        phoneNumber: user.phoneNumber,
+        roleId: role.id,
+      });
+    }
 
     // Sau khi xác thực, chuyển hướng người dùng về frontend với accessToken
     res.redirect('http://localhost:5173/' + '?accessToken=' + user.accessToken);
