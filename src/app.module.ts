@@ -7,17 +7,24 @@ import { PrismaService } from './prisma/prisma.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { MovieModule } from './movie/movie.module';
 import { RoleModule } from './role/role.module';
+import { UserService } from './user/user.service';
+import { RoleService } from './role/role.service';
+import { JwtModule, JwtService } from '@nestjs/jwt';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({isGlobal: true}),
-     AuthModule,
-      UserModule,
-      PrismaModule,
-      MovieModule,
-      RoleModule,
-    ],
+    ConfigModule.forRoot({ isGlobal: true }),
+    AuthModule,
+    UserModule,
+    PrismaModule,
+    MovieModule,
+    RoleModule,
+    JwtModule.register({
+      secret: process.env.JWT_SECRET || 'secret',
+      signOptions: { expiresIn: '1h' },
+    }),
+  ],
   controllers: [UserController],
-  providers: [PrismaService],
+  providers: [PrismaService, UserService, RoleService, JwtService],
 })
 export class AppModule {}
