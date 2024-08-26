@@ -7,6 +7,8 @@ import { PrismaService } from './prisma/prisma.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { MovieModule } from './movie/movie.module';
 import { RoleModule } from './role/role.module';
+import { CinemaService } from './cinema/cinema.service';
+import { CinemaModule } from './cinema/cinema.module';
 
 @Module({
   imports: [
@@ -16,8 +18,9 @@ import { RoleModule } from './role/role.module';
       PrismaModule,
       MovieModule,
       RoleModule,
+      CinemaModule,
     ],
   controllers: [UserController],
-  providers: [PrismaService],
+  providers: [PrismaService, CinemaService],
 })
 export class AppModule {}
