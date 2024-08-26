@@ -1,10 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UserDto } from './dto/user.dto';
+import * as argon2 from 'argon2';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jwt: JwtService,
+  ) {}
   async findByEmail(email: string) {
     return await this.prisma.user.findUnique({ where: { email } });
   }
@@ -18,5 +23,38 @@ export class UserService {
       where: { id: userId },
       data: data,
     });
+  }
+
+  async login(data: any) {
+    const user = await this.findByEmail(data.email);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    if (await argon2.verify(user.hashPass, data.password)) {
+      delete user.hashPass; // Xóa mật khẩu khỏi đối tượng người dùng
+
+      const payload = {
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        sub: user.id,
+      };
+      console.log('secret:', process.env.JWT_SECRET);
+
+      return {
+        statusCode: 200,
+        message: 'Login successful',
+        user: {
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          token: this.jwt.sign(payload, {
+            secret: process.env.JWT_SECRET,
+            expiresIn: '1h',
+          }),
+        },
+      };
+    }
+    throw new UnauthorizedException('Invalid password');
   }
 }
