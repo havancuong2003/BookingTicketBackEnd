@@ -24,8 +24,8 @@ export class CinemaController {
   }
 
   @Put('update/:id')
-  update(@Param('id') id: number, @Body() updateMovieDto: CinemaDTO) {
-    return this.cinemaService.update(id, updateMovieDto);
+  update(@Param('id') id: string, @Body() updateMovieDto: CinemaDTO) {
+    return this.cinemaService.update(Number(id), updateMovieDto);
   }
 
   @Delete('delete/:id')
@@ -33,8 +33,8 @@ export class CinemaController {
     return this.cinemaService.delete(id);
   }
 
-  @Get(':id')
-  findById(@Param('id') id: number) {
-    return this.cinemaService.findById(id);
+  @Get('details/:id')
+  findById(@Param('id') id: string) {
+    return this.cinemaService.findById(Number(id));
   }
 }

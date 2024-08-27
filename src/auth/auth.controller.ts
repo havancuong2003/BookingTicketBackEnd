@@ -77,9 +77,17 @@ export class AuthController {
         roleId: role.id,
       });
     }
-
+    req.session.accessToken = user.accessToken;
     // Sau khi xác thực, chuyển hướng người dùng về frontend với accessToken
-    res.redirect('http://localhost:5173/' + '?accessToken=' + user.accessToken);
+    res.redirect('http://localhost:5173');
+  }
+
+  @Get('token')
+  getToken(@Req() req) {
+    const accessToken = req.session?.accessToken;
+    return {
+      accessToken: accessToken || null,
+    };
   }
 
   @Post('upload')

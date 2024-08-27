@@ -7,20 +7,38 @@ import { PrismaService } from './prisma/prisma.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { MovieModule } from './movie/movie.module';
 import { RoleModule } from './role/role.module';
+import { UserService } from './user/user.service';
+import { RoleService } from './role/role.service';
+import { JwtModule, JwtService } from '@nestjs/jwt';
 import { CinemaService } from './cinema/cinema.service';
 import { CinemaModule } from './cinema/cinema.module';
+import { RoomController } from './room/room.controller';
+import { RoomService } from './room/room.service';
+import { RoomModule } from './room/room.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({isGlobal: true}),
-     AuthModule,
-      UserModule,
-      PrismaModule,
-      MovieModule,
-      RoleModule,
-      CinemaModule,
-    ],
-  controllers: [UserController],
-  providers: [PrismaService, CinemaService],
+    ConfigModule.forRoot({ isGlobal: true }),
+    AuthModule,
+    UserModule,
+    PrismaModule,
+    MovieModule,
+    RoleModule,
+    JwtModule.register({
+      secret: process.env.JWT_SECRET || 'secret',
+      signOptions: { expiresIn: '1h' },
+    }),
+    CinemaModule,
+    RoomModule,
+  ],
+  controllers: [UserController, RoomController],
+  providers: [
+    PrismaService,
+    CinemaService,
+    UserService,
+    RoleService,
+    JwtService,
+    RoomService,
+  ],
 })
 export class AppModule {}
