@@ -56,7 +56,9 @@ model Cinema {
   totalScreens Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
   rooms Room[]
+  screenings  Screening[]
 }
 
 
@@ -66,5 +68,22 @@ model Room {
   roomId    Int      @id @default(autoincrement())
   roomCode  String?
   cinemaId Int?
+
   cinema Cinema? @relation(fields: [cinemaId],references: [cinemaId])
+  screenings  Screening[]
+}
+
+
+model Screening {
+  screeningId Int      @id @default(autoincrement())
+  movieId     Int?
+  cinemaId    Int?
+  roomId      Int?
+  startTime   DateTime?
+  endTime     DateTime?
+  createdAt   DateTime? @default(now())
+  updatedAt   DateTime? @updatedAt
+
+  cinema      Cinema?    @relation(fields: [cinemaId], references: [cinemaId])
+  room        Room?     @relation(fields: [roomId], references: [roomId])
 }

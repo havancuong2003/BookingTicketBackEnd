@@ -16,6 +16,8 @@ import { CinemaModule } from './cinema/cinema.module';
 import { RoomController } from './room/room.controller';
 import { RoomService } from './room/room.service';
 import { RoomModule } from './room/room.module';
+import { ScreeningService } from './screening/screening.service';
+import { ScreeningModule } from './screening/screening.module';
 
 @Module({
   imports: [
@@ -31,6 +33,7 @@ import { RoomModule } from './room/room.module';
     }),
     CinemaModule,
     RoomModule,
+    ScreeningModule,
   ],
   controllers: [UserController, RoomController],
   providers: [
@@ -40,6 +43,7 @@ import { RoomModule } from './room/room.module';
     RoleService,
     JwtService,
     RoomService,
+    ScreeningService,
   ],
 })
 export class AppModule implements NestModule {
