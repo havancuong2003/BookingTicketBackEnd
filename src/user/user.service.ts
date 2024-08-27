@@ -3,7 +3,6 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { UserDto } from './dto/user.dto';
 import * as argon2 from 'argon2';
 import { JwtService } from '@nestjs/jwt';
-import { Response, Request } from 'express';
 
 @Injectable()
 export class UserService {
@@ -28,6 +27,7 @@ export class UserService {
 
   async login(data: any) {
     const user = await this.findByEmail(data.email);
+
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
@@ -39,11 +39,14 @@ export class UserService {
         firstName: user.firstName,
         lastName: user.lastName,
         sub: user.id,
+        role: user.roleId,
       };
-      console.log('secret:', process.env.JWT_SECRET);
       const accessToken = this.jwt.sign(payload, {
         secret: process.env.JWT_SECRET,
         expiresIn: '1h',
+      });
+      const role = await this.prisma.role.findUnique({
+        where: { id: user.roleId },
       });
 
       return {
@@ -54,9 +57,23 @@ export class UserService {
           firstName: user.firstName,
           lastName: user.lastName,
           token: accessToken,
+          role: role.roleName,
         },
       };
     }
     throw new UnauthorizedException('Invalid password');
+  }
+
+  async checkRoleLoginGG(email: string): Promise<string> {
+    const user = await this.findByEmail(email);
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const role = await this.prisma.role.findUnique({
+      where: { id: user.roleId },
+    });
+    return role.roleName;
   }
 }

@@ -35,6 +35,7 @@ export class AuthController {
       fs.mkdirSync(this.uploadDir, { recursive: true });
     }
   }
+
   private readonly uploadDir = path.join(__dirname, '../../uploads');
 
   @Get('google')
@@ -48,9 +49,9 @@ export class AuthController {
   async googleAuthRedirect(@Req() req, @Res() res: Response) {
     const user = req.user;
     const existingUser = await this.userService.findByEmail(user.email);
+    req.session.accessToken = user.accessToken;
 
     if (existingUser) {
-      // Chỉ cập nhật thông tin nếu có sự thay đổi
       const updateData: Partial<UserDto> = {};
       if (existingUser.firstName !== user.firstName)
         updateData.firstName = user.firstName;
@@ -60,12 +61,18 @@ export class AuthController {
         updateData.picture = user.picture;
 
       if (Object.keys(updateData).length > 0) {
-        console.log('update');
-
         await this.userService.update(existingUser.id, updateData);
       }
+
+      const userRole = await this.userService.checkRoleLoginGG(user.email);
+      req.session.role = userRole; // Lưu role vào session
+
+      if (userRole === 'admin') {
+        return res.redirect('http://localhost:5173/dashboard');
+      } else {
+        return res.redirect('http://localhost:5173');
+      }
     } else {
-      // Tạo tài khoản mới nếu không tồn tại
       const role = await this.roleService.findRole('user');
       await this.userService.create({
         email: user.email,
@@ -76,17 +83,20 @@ export class AuthController {
         phoneNumber: user.phoneNumber,
         roleId: role.id,
       });
+
+      req.session.role = 'user'; // Hoặc role được xác định khác
+
+      return res.redirect('http://localhost:5173');
     }
-    req.session.accessToken = user.accessToken;
-    res.redirect('http://localhost:5173');
   }
 
   @Get('token')
   getToken(@Req() req: Request, @Session() session: Record<string, any>) {
     const accessToken = session.accessToken;
-    console.log('Session in getToken:', session);
+    const role = session.role;
     return {
       accessToken: accessToken || null,
+      role: role || null,
     };
   }
 
@@ -94,7 +104,7 @@ export class AuthController {
   async login(@Body() data: any, @Session() session: Record<string, any>) {
     const dataBack = await this.userService.login(data);
     session.accessToken = dataBack.user.token;
-    console.log('dataBack:', session);
+    session.role = dataBack.user.role; // Lưu role vào session
     return dataBack;
   }
 

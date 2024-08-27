@@ -14,7 +14,7 @@ async function bootstrap() {
       secret: 'secret',
       resave: false,
       saveUninitialized: false,
-      cookie: { maxAge: 3600000, httpOnly: true, secure: false },
+      cookie: { maxAge: 36000, httpOnly: true, secure: false },
     }),
   );
   app.enableCors({
