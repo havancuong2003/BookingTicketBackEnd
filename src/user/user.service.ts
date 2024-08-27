@@ -1,8 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Req, Res, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UserDto } from './dto/user.dto';
 import * as argon2 from 'argon2';
 import { JwtService } from '@nestjs/jwt';
+import { Response, Request } from 'express';
 
 @Injectable()
 export class UserService {
@@ -40,6 +41,10 @@ export class UserService {
         sub: user.id,
       };
       console.log('secret:', process.env.JWT_SECRET);
+      const accessToken = this.jwt.sign(payload, {
+        secret: process.env.JWT_SECRET,
+        expiresIn: '1h',
+      });
 
       return {
         statusCode: 200,
@@ -48,10 +53,7 @@ export class UserService {
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
-          token: this.jwt.sign(payload, {
-            secret: process.env.JWT_SECRET,
-            expiresIn: '1h',
-          }),
+          token: accessToken,
         },
       };
     }
