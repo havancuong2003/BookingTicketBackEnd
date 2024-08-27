@@ -11,6 +11,11 @@ import { UserService } from './user/user.service';
 import { RoleService } from './role/role.service';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import * as session from 'express-session';
+import { CinemaService } from './cinema/cinema.service';
+import { CinemaModule } from './cinema/cinema.module';
+import { RoomController } from './room/room.controller';
+import { RoomService } from './room/room.service';
+import { RoomModule } from './room/room.module';
 
 @Module({
   imports: [
@@ -24,9 +29,18 @@ import * as session from 'express-session';
       secret: process.env.JWT_SECRET || 'secret',
       signOptions: { expiresIn: '1h' },
     }),
+    CinemaModule,
+    RoomModule,
   ],
-  controllers: [UserController],
-  providers: [PrismaService, UserService, RoleService, JwtService],
+  controllers: [UserController, RoomController],
+  providers: [
+    PrismaService,
+    CinemaService,
+    UserService,
+    RoleService,
+    JwtService,
+    RoomService,
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

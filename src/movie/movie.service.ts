@@ -12,7 +12,6 @@ export class MovieService {
 
   async create(data: MovieDto) {
     console.log('data:', data);
-
     return this.prisma.movie.create({ data });
   }
 
