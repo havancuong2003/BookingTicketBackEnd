@@ -9,11 +9,11 @@ import {
   Post,
   Req,
   Res,
+  Session,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 
 import { Response, Request } from 'express';
 import { GoogleOAuthGuard } from './strategy/google-oauth.guard';
@@ -78,16 +78,24 @@ export class AuthController {
       });
     }
     req.session.accessToken = user.accessToken;
-    // Sau khi xác thực, chuyển hướng người dùng về frontend với accessToken
     res.redirect('http://localhost:5173');
   }
 
   @Get('token')
-  getToken(@Req() req) {
-    const accessToken = req.session?.accessToken;
+  getToken(@Req() req: Request, @Session() session: Record<string, any>) {
+    const accessToken = session.accessToken;
+    console.log('Session in getToken:', session);
     return {
       accessToken: accessToken || null,
     };
+  }
+
+  @Post('login')
+  async login(@Body() data: any, @Session() session: Record<string, any>) {
+    const dataBack = await this.userService.login(data);
+    session.accessToken = dataBack.user.token;
+    console.log('dataBack:', session);
+    return dataBack;
   }
 
   @Post('upload')

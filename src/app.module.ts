@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { UserController } from './user/user.controller';
@@ -10,6 +10,7 @@ import { RoleModule } from './role/role.module';
 import { UserService } from './user/user.service';
 import { RoleService } from './role/role.service';
 import { JwtModule, JwtService } from '@nestjs/jwt';
+import * as session from 'express-session';
 import { CinemaService } from './cinema/cinema.service';
 import { CinemaModule } from './cinema/cinema.module';
 import { RoomController } from './room/room.controller';
@@ -41,4 +42,21 @@ import { RoomModule } from './room/room.module';
     RoomService,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(
+        session({
+          secret:
+            process.env.SESSION_SECRET ||
+            'averylogphrasebiggerthanthirtytwochars',
+          resave: false,
+          saveUninitialized: false,
+          cookie: {
+            maxAge: 3600000, // 1 hour
+          },
+        }),
+      )
+      .forRoutes('*');
+  }
+}
