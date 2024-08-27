@@ -1,7 +1,8 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
 import { UserService } from './user.service';
 import * as argon2 from 'argon2';
 import { RoleService } from 'src/role/role.service';
+import { Response, Request } from 'express';
 @Controller('user')
 export class UserController {
   constructor(
@@ -22,13 +23,24 @@ export class UserController {
       lastName: data.lastName,
       picture: null,
       phoneNumber: null,
-
       roleId: role.id,
     });
   }
 
-  @Post('login')
-  async login(@Body() data: any) {
-    return await this.userService.login(data);
-  }
+  // @Post('login')
+  // async login(@Body() data: any, @Req() request: Request) {
+  //   const dataBack = await this.userService.login(data);
+  //   request.session.accessToken = dataBack.user.token;
+  //   console.log('dataBack:', request.session);
+  //   return dataBack;
+  // }
+
+  // @Get('test')
+  // findAll(@Req() request: Request) {
+  //   const visits = request.session.visits || 0;
+  //   request.session.visits = visits + 1;
+  //   console.log('visits:', visits);
+
+  //   return { visits: request.session.visits };
+  // }
 }
