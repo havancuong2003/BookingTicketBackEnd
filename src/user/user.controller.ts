@@ -32,21 +32,4 @@ export class UserController {
       roleId: role.id,
     });
   }
-
-  // @Post('login')
-  // async login(@Body() data: any, @Req() request: Request) {
-  //   const dataBack = await this.userService.login(data);
-  //   request.session.accessToken = dataBack.user.token;
-  //   console.log('dataBack:', request.session);
-  //   return dataBack;
-  // }
-
-  // @Get('test')
-  // findAll(@Req() request: Request) {
-  //   const visits = request.session.visits || 0;
-  //   request.session.visits = visits + 1;
-  //   console.log('visits:', visits);
-
-  //   return { visits: request.session.visits };
-  // }
 }

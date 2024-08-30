@@ -212,10 +212,8 @@ export class AuthController {
     @UploadedFile() file: Express.Multer.File,
     @Body() body: { title: string },
   ) {
-    const authorizationHeader = req.headers['authorization'];
     const userGoogleToken = req.cookies['userGoogleToken'];
     // const accessToken = authorizationHeader?.split(' ')[1];
-    console.log('userGoogleToken', userGoogleToken);
 
     if (!file) {
       return {
