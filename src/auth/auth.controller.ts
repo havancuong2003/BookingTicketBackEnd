@@ -275,6 +275,7 @@ export class AuthController {
     try {
       const role = await this.roleService.findRole('user');
       const newUser = await this.authService.signup(signUpDto, role.id);
+
       return {
         statusCode: 201,
         message: 'User registered successfully',

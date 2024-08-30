@@ -28,12 +28,12 @@ export class SignUpDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(50) // Giới hạn độ dài tối đa là 50 ký tự
-  @MinLength(1) // Giới hạn độ dài tối thiểu là 3 ký tự
+  @MinLength(2) // Giới hạn độ dài tối thiểu là 3 ký tự
   firstName: string;
 
   @IsString()
   @IsNotEmpty()
   @MaxLength(50) // Giới hạn độ dài tối đa là 50 ký tự
-  @MinLength(1) // Giới hạn độ dài tối thiểu là 3 ký tự
+  @MinLength(2) // Giới hạn độ dài tối thiểu là 3 ký tự
   lastName: string;
 }
