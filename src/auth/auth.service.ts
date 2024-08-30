@@ -29,7 +29,7 @@ export class AuthService {
       requestBody: {
         name: 'Uploaded Video',
         mimeType: 'video/mp4', // Cần thay đổi nếu video có định dạng khác
-        parents: ['1zX4fQI_q9-NFlpCSPW2WkhP7OuCaQKAO'],
+        parents: ['1J8T36q2dpA-Q70Df8XjqVIAvZiV6Fpw_'],
       },
       media: {
         mimeType: 'video/mp4', // Cần thay đổi nếu video có định dạng khác

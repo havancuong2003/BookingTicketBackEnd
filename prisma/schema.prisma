@@ -30,6 +30,7 @@ model User{
   role Role? @relation(fields: [roleId],references: [id])
   createdAt DateTime? @default(now())
   updatedAt DateTime? @updatedAt
+  seats Seat[]
 }
 
 model Movie {
@@ -71,6 +72,7 @@ model Room {
 
   cinema Cinema? @relation(fields: [cinemaId],references: [cinemaId])
   screenings  Screening[]
+  seats Seat[]
 }
 
 
@@ -84,6 +86,24 @@ model Screening {
   createdAt   DateTime? @default(now())
   updatedAt   DateTime? @updatedAt
 
+seats Seat[]
   cinema      Cinema?    @relation(fields: [cinemaId], references: [cinemaId])
   room        Room?     @relation(fields: [roomId], references: [roomId])
+}
+
+
+model Seat {
+  seatId     Int     @id // Primary Key: ID ghế
+  roomId  Int?
+  screeningId  Int?
+  seatNumber Int?     
+  rowCode  String ? 
+  seatType   String ?  
+  status     Int ? 
+  userId     Int ?
+
+
+ user User? @relation(fields: [userId], references: [id])
+  screening  Screening? @relation(fields: [screeningId], references: [screeningId])
+  room        Room?     @relation(fields: [roomId], references: [roomId])// Optional: Maps the table name in the database
 }

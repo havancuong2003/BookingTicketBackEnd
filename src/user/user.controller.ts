@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, Res } from '@nestjs/common';
 import { UserService } from './user.service';
 import * as argon2 from 'argon2';
 import { RoleService } from 'src/role/role.service';
@@ -43,4 +43,13 @@ export class UserController {
 
   //   return { visits: request.session.visits };
   // }
+
+  @Get('getAll')
+  async getAll() {
+    return this.userService.getAll();
+  }
+  @Get('idByEmail/:email')
+  async getIdByEmail(@Param('email') email: string) {
+    return this.userService.getUserIdByEmail(email);
+  }
 }

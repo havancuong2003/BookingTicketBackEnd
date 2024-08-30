@@ -76,4 +76,13 @@ export class UserService {
     });
     return role.roleName;
   }
+
+  async getAll() {
+    return await this.prisma.user.findMany({});
+  }
+
+  async getUserIdByEmail(email: string) {
+    const UserDto = await this.prisma.user.findUnique({ where: { email } });
+    return UserDto.id;
+  }
 }
