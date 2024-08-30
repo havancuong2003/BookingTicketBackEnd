@@ -1,7 +1,7 @@
 import { generateToken } from './../utils/jwt-helper';
 import { UserService } from './../user/user.service';
 import { AuthService } from './auth.service';
-import { AuthDto } from './dto';
+import { SignUpDto } from './dto';
 
 import {
   Body,
@@ -18,6 +18,10 @@ import {
   UseGuards,
   UseInterceptors,
   NotFoundException,
+  ConflictException,
+  BadRequestException,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 
 import { Response, Request } from 'express';
@@ -266,8 +270,24 @@ export class AuthController {
     return `${baseName}-${uniqueSuffix}${ext}`;
   }
 
-  //   @Post('signup')
-  //   signup(@Body() dto: AuthDto) {
-  //     return this.authService.signup(dto);
-  //   }
+  @Post('signup')
+  async signup(@Body() signUpDto: SignUpDto) {
+    try {
+      const role = await this.roleService.findRole('user');
+      const newUser = await this.authService.signup(signUpDto, role.id);
+      return {
+        statusCode: 201,
+        message: 'User registered successfully',
+        user: newUser,
+      };
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        throw error;
+      }
+      if (error.status === 400) {
+        throw new BadRequestException(error.response.message);
+      }
+      throw new InternalServerErrorException('Something went wrong');
+    }
+  }
 }

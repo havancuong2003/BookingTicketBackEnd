@@ -6,11 +6,13 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
-import { AuthDto } from './dto';
+import { SignUpDto } from './dto';
 import * as argon from 'argon2';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { google } from 'googleapis';
 import * as fs from 'fs';
+import { UserService } from '../user/user.service';
+import { UserDto } from 'src/user/dto/user.dto';
+
 @Injectable()
 export class AuthService {
   private oauth2Client = new google.auth.OAuth2(
@@ -21,6 +23,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
+    private readonly userService: UserService,
   ) {}
 
   async uploadVideo(accessToken: string, videoPath: string) {
@@ -69,5 +72,20 @@ export class AuthService {
         );
       }
     }
+  }
+
+  async signup(signUpDto: SignUpDto, roleID: number) {
+    console.log('signUpDto', signUpDto);
+
+    const userDto: UserDto = {
+      email: signUpDto.email,
+      hashPass: await argon.hash(signUpDto.password),
+      firstName: signUpDto.firstName,
+      lastName: signUpDto.lastName,
+      picture: null,
+      roleId: roleID,
+      phoneNumber: null,
+    };
+    return this.userService.create(userDto);
   }
 }
