@@ -6,7 +6,9 @@ import { AuthDto } from './dto';
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
+  InternalServerErrorException,
   Post,
   Req,
   Res,
@@ -15,6 +17,7 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  NotFoundException,
 } from '@nestjs/common';
 
 import { Response, Request } from 'express';
@@ -67,18 +70,6 @@ export class AuthController {
     let userData: JwtPayload;
 
     if (existingUser) {
-      const updateData: Partial<UserDto> = {};
-      if (existingUser.firstName !== user.firstName)
-        updateData.firstName = user.firstName;
-      if (existingUser.lastName !== user.lastName)
-        updateData.lastName = user.lastName;
-      if (existingUser.picture !== user.picture)
-        updateData.picture = user.picture;
-
-      if (Object.keys(updateData).length > 0) {
-        await this.userService.update(existingUser.id, updateData);
-      }
-
       userData = {
         id: existingUser.id,
         email: existingUser.email,
@@ -213,30 +204,59 @@ export class AuthController {
     @Body() body: { title: string },
   ) {
     const userGoogleToken = req.cookies['userGoogleToken'];
-    // const accessToken = authorizationHeader?.split(' ')[1];
 
     if (!file) {
       return {
         statusCode: 400,
-        message: 'No file uploaded',
+        message: 'Không có file nào được tải lên',
       };
     }
+
     const uniqueFileName = this.generateUniqueFileName(file.originalname);
     const filePath = path.join(this.uploadDir, uniqueFileName);
     fs.writeFileSync(filePath, file.buffer);
 
     if (!userGoogleToken) {
+      fs.unlinkSync(filePath); // Xóa file tạm nếu không có token
       return {
         statusCode: 401,
-        message: 'Access token is required',
+        message: 'Cần có access token',
       };
     }
 
-    const result = await this.authService.uploadVideo(
-      userGoogleToken,
-      filePath,
-    );
-    return result;
+    try {
+      const result = await this.authService.uploadVideo(
+        userGoogleToken,
+        filePath,
+      );
+      return {
+        statusCode: 200,
+        message: 'File đã được tải lên thành công',
+        data: result,
+      };
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        return {
+          statusCode: 403,
+          message: error.message,
+        };
+      } else if (error instanceof NotFoundException) {
+        return {
+          statusCode: 404,
+          message: error.message,
+        };
+      } else if (error instanceof InternalServerErrorException) {
+        return {
+          statusCode: 500,
+          message: error.message,
+        };
+      } else {
+        return {
+          statusCode: 500,
+          message: 'Đã xảy ra lỗi khi tải file lên: ' + error.message,
+        };
+      }
+    }
   }
 
   private generateUniqueFileName(originalName: string): string {
