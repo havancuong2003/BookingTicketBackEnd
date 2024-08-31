@@ -6,6 +6,7 @@ import { GoogleStrategy } from './strategy/google.strategy';
 import { UserService } from 'src/user/user.service';
 import { RoleService } from 'src/role/role.service';
 import { JwtService } from '@nestjs/jwt';
+import { EmailService } from 'src/email/email.service';
 
 @Module({
   imports: [PassportModule.register({ defaultStrategy: 'google' })],
@@ -15,6 +16,7 @@ import { JwtService } from '@nestjs/jwt';
     UserService,
     RoleService,
     JwtService,
+    EmailService,
   ],
   controllers: [AuthController],
 })

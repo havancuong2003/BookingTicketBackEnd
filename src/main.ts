@@ -10,15 +10,6 @@ dotenv.config();
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // app.use(
-  //   session({
-  //     secret: process.env.SESSION_SECRET || 'verysecretkey',
-  //     resave: false,
-  //     saveUninitialized: false,
-  //     cookie: { maxAge: 72000, httpOnly: true, secure: false },
-  //   }),
-  // );
-
   app.use(cookieParser()); // Đảm bảo cookie-parser được cấu hình
 
   app.enableCors({

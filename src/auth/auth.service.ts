@@ -1,8 +1,10 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
@@ -12,6 +14,7 @@ import { google } from 'googleapis';
 import * as fs from 'fs';
 import { UserService } from '../user/user.service';
 import { UserDto } from 'src/user/dto/user.dto';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -85,7 +88,73 @@ export class AuthService {
       picture: null,
       roleId: roleID,
       phoneNumber: null,
+      isEmailVerified: false,
+      verificationToken: null,
+      verificationTokenExpires: null,
+      resetPasswordToken: null,
+      resetPasswordExpires: null,
     };
     return this.userService.create(userDto);
+  }
+
+  async generatePasswordResetToken(userId: number): Promise<string> {
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        resetPasswordToken: token,
+        resetPasswordExpires: expires,
+      },
+    });
+
+    return token;
+  }
+
+  async generateVerificationToken(email: string): Promise<string> {
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 1 * 60 * 1000); // 15 minutes from now
+
+    await this.prisma.user.update({
+      where: { email },
+      data: {
+        verificationToken: token,
+        verificationTokenExpires: expires,
+      },
+    });
+
+    return token;
+  }
+
+  async verifyEmail(email: string, token: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    if (user.isEmailVerified) {
+      throw new BadRequestException('Email is already verified');
+    }
+
+    if (user.verificationToken !== token) {
+      throw new UnauthorizedException('Invalid verification token');
+    }
+
+    if (user.verificationTokenExpires < new Date()) {
+      throw new UnauthorizedException('Verification token has expired');
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isEmailVerified: true,
+        verificationToken: null,
+        verificationTokenExpires: null,
+      },
+    });
   }
 }

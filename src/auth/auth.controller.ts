@@ -33,6 +33,7 @@ import * as crypto from 'crypto';
 import { RoleService } from 'src/role/role.service';
 import { UserDto } from 'src/user/dto/user.dto';
 import * as tokenService from '../utils';
+import { EmailService } from 'src/email/email.service';
 interface JwtPayload {
   id: number;
   email: string;
@@ -45,6 +46,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly userService: UserService,
     private readonly roleService: RoleService,
+    private readonly emailService: EmailService,
   ) {
     if (!fs.existsSync(this.uploadDir)) {
       fs.mkdirSync(this.uploadDir, { recursive: true });
@@ -90,6 +92,11 @@ export class AuthController {
         picture: user.picture,
         phoneNumber: user.phoneNumber,
         roleId: role.id,
+        isEmailVerified: false,
+        verificationToken: null,
+        verificationTokenExpires: null,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
       });
 
       userData = {
@@ -166,6 +173,12 @@ export class AuthController {
 
     res.cookie('refreshToken', dataBack.token.refreshToken, {
       httpOnly: true,
+      secure: false,
+      maxAge: 3600000,
+    });
+
+    res.cookie('accessToken', dataBack.token.accessToken, {
+      httpOnly: false,
       secure: false,
       maxAge: 3600000,
     });
@@ -275,10 +288,12 @@ export class AuthController {
     try {
       const role = await this.roleService.findRole('user');
       const newUser = await this.authService.signup(signUpDto, role.id);
-
+      console.log('newUser', newUser);
+      await this.emailService.sendVerificationEmail(newUser.email, newUser);
       return {
         statusCode: 201,
-        message: 'User registered successfully',
+        message:
+          'User registered successfully, please check your email to verify your account',
         user: newUser,
       };
     } catch (error) {
@@ -290,5 +305,82 @@ export class AuthController {
       }
       throw new InternalServerErrorException('Something went wrong');
     }
+  }
+
+  @Post('forgot-password')
+  async forgotPassword(@Body() data: { email: string }) {
+    const user = await this.userService.findByEmail(
+      'cuonghvhe176362@fpt.edu.vn',
+    );
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    const token = await this.authService.generatePasswordResetToken(user.id);
+    await this.emailService.sendForgotPasswordEmail(
+      user.email,
+      token,
+      user.firstName,
+    );
+    return {
+      statusCode: 200,
+      message: 'Password reset email sent successfully',
+    };
+  }
+
+  @Post('send-verification-email')
+  async sendVerificationEmail(@Body() data: { email: string }) {
+    const user = await this.userService.findByEmail(data.email);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (user.isEmailVerified) {
+      throw new BadRequestException('Email is already verified');
+    }
+    await this.emailService.sendVerificationEmail(user.email, user);
+    return {
+      statusCode: 200,
+      message: 'Verification email sent successfully',
+    };
+  }
+
+  @Post('verify-email')
+  async verifyEmail(@Body() data: { email: string; token: string }) {
+    try {
+      await this.authService.verifyEmail(data.email, data.token);
+      return {
+        statusCode: 200,
+        message: 'Email verified successfully',
+      };
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Something went wrong');
+    }
+  }
+
+  @Post('time-remaining-verify')
+  async timeRemainingVerify(@Body() data: { email: string }) {
+    const user = await this.userService.findByEmail(data.email);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    const timeRemaining = user.verificationTokenExpires
+      ? Math.max(
+          0,
+          Math.floor(
+            (user.verificationTokenExpires.getTime() - new Date().getTime()) /
+              1000,
+          ),
+        )
+      : null;
+    return {
+      statusCode: 200,
+      message: 'Time remaining verify',
+      timeRemaining: timeRemaining,
+    };
   }
 }
