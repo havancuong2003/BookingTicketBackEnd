@@ -165,28 +165,37 @@ export class AuthController {
 
   @Post('login')
   async login(
-    @Body() data: any,
+    @Body() data: { email: string; password: string },
     @Res({ passthrough: true }) res: Response,
-    @Req() req: Request,
   ) {
-    const dataBack = await this.userService.login(data);
+    const loginResult = await this.userService.login(data);
 
-    res.cookie('refreshToken', dataBack.token.refreshToken, {
+    if (loginResult.requireEmailVerification) {
+      return {
+        statusCode: 403,
+        message: 'Email not verified',
+        requireEmailVerification: true,
+        email: loginResult.email,
+      };
+    }
+
+    res.cookie('refreshToken', loginResult.token.refreshToken, {
       httpOnly: true,
       secure: false,
-      maxAge: 3600000,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    res.cookie('accessToken', dataBack.token.accessToken, {
+    res.cookie('accessToken', loginResult.token.accessToken, {
       httpOnly: false,
       secure: false,
-      maxAge: 3600000,
+      maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
     return {
       statusCode: 200,
       message: 'Login successful',
-      accessToken: dataBack.token.accessToken, // Trả về access token
+      accessToken: loginResult.token.accessToken,
+      user: loginResult.user,
     };
   }
 
@@ -333,8 +342,13 @@ export class AuthController {
     if (!user) {
       throw new NotFoundException('User not found');
     }
+    console.log('user', user);
+
     if (user.isEmailVerified) {
-      throw new BadRequestException('Email is already verified');
+      return {
+        statusCode: 400,
+        message: 'Email is already verified',
+      };
     }
     await this.emailService.sendVerificationEmail(user.email, user);
     return {
@@ -346,6 +360,16 @@ export class AuthController {
   @Post('verify-email')
   async verifyEmail(@Body() data: { email: string; token: string }) {
     try {
+      const user = await this.userService.findByEmail(data.email);
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      if (user.isEmailVerified) {
+        return {
+          statusCode: 400,
+          message: 'Email is already verified',
+        };
+      }
       await this.authService.verifyEmail(data.email, data.token);
       return {
         statusCode: 200,

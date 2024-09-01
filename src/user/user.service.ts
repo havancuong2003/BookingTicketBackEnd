@@ -31,21 +31,30 @@ export class UserService {
     });
   }
 
-  async login(data: any) {
+  async login(data: { email: string; password: string }) {
     const user = await this.findByEmail(data.email);
 
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
-    if (await argon2.verify(user.hashPass, data.password)) {
-      delete user.hashPass; // Xóa mật khẩu khỏi đối tượng người dùng
 
+    if (!user.isEmailVerified) {
+      return {
+        statusCode: 403,
+        message: 'Email not verified',
+        requireEmailVerification: true,
+        email: user.email,
+      };
+    }
+
+    if (await argon2.verify(user.hashPass, data.password)) {
       const userData: JwtPayload = {
         id: user.id,
         email: user.email,
         firstName: user.firstName,
         role: user.roleId,
       };
+
       const accessToken = await tokenService.generateToken(
         userData,
         process.env.ACCESS_TOKEN_SECRET,
@@ -65,8 +74,16 @@ export class UserService {
           accessToken: accessToken,
           refreshToken: refreshToken,
         },
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.roleId,
+        },
       };
     }
+
     throw new UnauthorizedException('Invalid password');
   }
 

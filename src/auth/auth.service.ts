@@ -114,7 +114,7 @@ export class AuthService {
 
   async generateVerificationToken(email: string): Promise<string> {
     const token = crypto.randomBytes(32).toString('hex');
-    const expires = new Date(Date.now() + 1 * 60 * 1000); // 15 minutes from now
+    const expires = new Date(Date.now() + 2 * 60 * 1000); // 15 minutes from now
 
     await this.prisma.user.update({
       where: { email },
@@ -140,12 +140,18 @@ export class AuthService {
       throw new BadRequestException('Email is already verified');
     }
 
-    if (user.verificationToken !== token) {
-      throw new UnauthorizedException('Invalid verification token');
-    }
-
-    if (user.verificationTokenExpires < new Date()) {
-      throw new UnauthorizedException('Verification token has expired');
+    if (
+      user.verificationToken !== token ||
+      user.verificationTokenExpires < new Date()
+    ) {
+      if (user.verificationToken !== token) {
+        console.log('user.verificationToken', user.verificationToken);
+        console.log('token', token);
+        console.log('Invalid verification token');
+      } else {
+        console.log('Verification token has expired');
+      }
+      throw new UnauthorizedException('Invalid or expired verification token');
     }
 
     await this.prisma.user.update({
