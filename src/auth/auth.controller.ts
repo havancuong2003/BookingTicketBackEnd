@@ -66,23 +66,62 @@ export class AuthController {
   async googleAuthRedirect(@Req() req, @Res() res: Response) {
     const user = req.user;
 
-    res.cookie('userGoogleToken', user.accessToken, {
-      httpOnly: true,
-      secure: false,
-      maxAge: 3600000,
-    });
     const existingUser = await this.userService.findByEmail(user.email);
 
-    let userData: JwtPayload;
-
     if (existingUser) {
-      userData = {
+      if (!existingUser.isEmailVerified) {
+        // User exists but email is not verified
+        await this.emailService.sendVerificationEmail(
+          existingUser.email,
+          existingUser,
+        );
+        return res.redirect(
+          `http://localhost:5173/verify-email?email=${existingUser.email}`,
+        );
+      }
+
+      // User exists and email is verified, proceed with login
+      const userData: JwtPayload = {
         id: existingUser.id,
         email: existingUser.email,
         firstName: existingUser.firstName,
         role: existingUser.roleId,
       };
+
+      const accessToken = await tokenService.generateToken(
+        userData,
+        process.env.ACCESS_TOKEN_SECRET,
+        process.env.ACCESS_TOKEN_LIFE,
+      );
+      const refreshToken = await tokenService.generateToken(
+        userData,
+        process.env.REFRESH_TOKEN_SECRET,
+        process.env.REFRESH_TOKEN_LIFE,
+      );
+
+      // Set cookies
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: false,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+
+      res.cookie('accessToken', accessToken, {
+        httpOnly: false,
+        secure: false,
+        maxAge: 15 * 60 * 1000, // 15 minutes
+      });
+
+      // Redirect to appropriate page
+      const adminRole = await this.roleService.findRole('admin');
+      const redirectUrl =
+        userData.role === adminRole.id
+          ? 'http://localhost:5173/dashboard'
+          : 'http://localhost:5173';
+
+      return res.redirect(redirectUrl);
     } else {
+      // New user, create account and send verification email
       const role = await this.roleService.findRole('user');
       const newUser = await this.userService.create({
         email: user.email,
@@ -99,47 +138,14 @@ export class AuthController {
         resetPasswordExpires: null,
       });
 
-      userData = {
-        id: newUser.id,
-        email: newUser.email,
-        firstName: newUser.firstName,
-        role: newUser.roleId,
-      };
+      // Send verification email
+      await this.emailService.sendVerificationEmail(newUser.email, newUser);
+
+      // Redirect to verification page
+      return res.redirect(
+        `http://localhost:5173/verify-email?email=${newUser.email}`,
+      );
     }
-
-    const accessToken = await tokenService.generateToken(
-      userData,
-      process.env.ACCESS_TOKEN_SECRET,
-      process.env.ACCESS_TOKEN_LIFE,
-    );
-    const refreshToken = await tokenService.generateToken(
-      userData,
-      process.env.REFRESH_TOKEN_SECRET,
-      process.env.REFRESH_TOKEN_LIFE,
-    );
-
-    // Set refresh token in HTTP-only cookie
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: false,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
-    // Set access token in a secure, short-lived cookie
-    res.cookie('accessToken', accessToken, {
-      httpOnly: false, // Allow JavaScript access
-      secure: false,
-      maxAge: 15 * 60 * 1000, // 15 minutes
-    });
-
-    // Redirect to frontend without tokens in URL
-    const adminRole = await this.roleService.findRole('admin');
-    const redirectUrl =
-      userData.role === adminRole.id
-        ? 'http://localhost:5173/dashboard'
-        : 'http://localhost:5173';
-
-    return res.redirect(redirectUrl);
   }
 
   @Post('logout')
@@ -170,15 +176,11 @@ export class AuthController {
   ) {
     const loginResult = await this.userService.login(data);
 
-    if (loginResult.requireEmailVerification) {
-      return {
-        statusCode: 403,
-        message: 'Email not verified',
-        requireEmailVerification: true,
-        email: loginResult.email,
-      };
+    if (loginResult.statusCode !== 200) {
+      return loginResult; // Trả về kết quả lỗi trực tiếp
     }
 
+    // Xử lý đăng nhập thành công
     res.cookie('refreshToken', loginResult.token.refreshToken, {
       httpOnly: true,
       secure: false,
@@ -192,8 +194,8 @@ export class AuthController {
     });
 
     return {
-      statusCode: 200,
-      message: 'Login successful',
+      statusCode: loginResult.statusCode,
+      message: loginResult.message,
       accessToken: loginResult.token.accessToken,
       user: loginResult.user,
     };
