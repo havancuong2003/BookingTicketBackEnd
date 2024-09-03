@@ -34,6 +34,7 @@ import { RoleService } from 'src/role/role.service';
 import { UserDto } from 'src/user/dto/user.dto';
 import * as tokenService from '../utils';
 import { EmailService } from 'src/email/email.service';
+import * as argon from 'argon2';
 interface JwtPayload {
   id: number;
   email: string;
@@ -76,7 +77,7 @@ export class AuthController {
           existingUser,
         );
         return res.redirect(
-          `http://localhost:5173/verify-email?email=${existingUser.email}`,
+          `${process.env.FRONTEND_URL}/verify-email?email=${existingUser.email}`,
         );
       }
 
@@ -116,8 +117,8 @@ export class AuthController {
       const adminRole = await this.roleService.findRole('admin');
       const redirectUrl =
         userData.role === adminRole.id
-          ? 'http://localhost:5173/dashboard'
-          : 'http://localhost:5173';
+          ? `${process.env.FRONTEND_URL}/dashboard`
+          : `${process.env.FRONTEND_URL}`;
 
       return res.redirect(redirectUrl);
     } else {
@@ -143,7 +144,7 @@ export class AuthController {
 
       // Redirect to verification page
       return res.redirect(
-        `http://localhost:5173/verify-email?email=${newUser.email}`,
+        `${process.env.FRONTEND_URL}/verify-email?email=${newUser.email}`,
       );
     }
   }
@@ -318,31 +319,14 @@ export class AuthController {
     }
   }
 
-  @Post('forgot-password')
-  async forgotPassword(@Body() data: { email: string }) {
-    const user = await this.userService.findByEmail(
-      'cuonghvhe176362@fpt.edu.vn',
-    );
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    const token = await this.authService.generatePasswordResetToken(user.id);
-    await this.emailService.sendForgotPasswordEmail(
-      user.email,
-      token,
-      user.firstName,
-    );
-    return {
-      statusCode: 200,
-      message: 'Password reset email sent successfully',
-    };
-  }
-
   @Post('send-verification-email')
   async sendVerificationEmail(@Body() data: { email: string }) {
     const user = await this.userService.findByEmail(data.email);
     if (!user) {
-      throw new NotFoundException('User not found');
+      return {
+        statusCode: 404,
+        message: 'User not found',
+      };
     }
     console.log('user', user);
 
@@ -364,7 +348,10 @@ export class AuthController {
     try {
       const user = await this.userService.findByEmail(data.email);
       if (!user) {
-        throw new NotFoundException('User not found');
+        return {
+          statusCode: 404,
+          message: 'User not found',
+        };
       }
       if (user.isEmailVerified) {
         return {
@@ -372,19 +359,35 @@ export class AuthController {
           message: 'Email is already verified',
         };
       }
-      await this.authService.verifyEmail(data.email, data.token);
+      if (user.verificationToken !== data.token) {
+        return {
+          statusCode: 400,
+          message: 'Invalid verification token',
+        };
+      }
+      if (user.verificationTokenExpires < new Date()) {
+        return {
+          statusCode: 400,
+          message: 'Verification token has expired',
+        };
+      }
+
+      await this.userService.updateUser(user.id, {
+        isEmailVerified: true,
+        verificationToken: null,
+        verificationTokenExpires: null,
+      });
+
       return {
         statusCode: 200,
         message: 'Email verified successfully',
       };
     } catch (error) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof UnauthorizedException
-      ) {
-        throw error;
-      }
-      throw new InternalServerErrorException('Something went wrong');
+      console.error('Error verifying email:', error);
+      return {
+        statusCode: 500,
+        message: 'An error occurred while verifying email',
+      };
     }
   }
 
@@ -392,7 +395,10 @@ export class AuthController {
   async timeRemainingVerify(@Body() data: { email: string }) {
     const user = await this.userService.findByEmail(data.email);
     if (!user) {
-      throw new NotFoundException('User not found');
+      return {
+        statusCode: 404,
+        message: 'User not found',
+      };
     }
     const timeRemaining = user.verificationTokenExpires
       ? Math.max(
@@ -400,6 +406,154 @@ export class AuthController {
           Math.floor(
             (user.verificationTokenExpires.getTime() - new Date().getTime()) /
               1000,
+          ),
+        )
+      : null;
+    return {
+      statusCode: 200,
+      message: 'Time remaining verify',
+      timeRemaining: timeRemaining,
+    };
+  }
+
+  @Post('request-reset-password')
+  async requestResetPassword(@Body() data: { email: string }) {
+    const user = await this.userService.findByEmail(data.email);
+    if (!user) {
+      return {
+        statusCode: 404,
+        message: 'User not found',
+      };
+    }
+
+    const now = new Date();
+    if (
+      user.resetPasswordToken &&
+      user.resetPasswordExpires &&
+      user.resetPasswordExpires > now
+    ) {
+      // Token still valid
+      return {
+        statusCode: 200,
+        message:
+          'Reset token is still valid. Please check your email for the existing code.',
+      };
+    }
+
+    // Token expired or doesn't exist, generate new one
+    const resetToken = this.generateSixDigitToken();
+    const resetTokenExpires = new Date(now.getTime() + 15 * 60 * 1000); // 15 minutes
+
+    await this.userService.updateUser(user.id, {
+      resetPasswordToken: resetToken,
+      resetPasswordExpires: resetTokenExpires,
+    });
+
+    await this.emailService.sendForgotPasswordEmail(user.email, resetToken);
+
+    return {
+      statusCode: 200,
+      message:
+        'New password reset code sent successfully. Please check your email.',
+    };
+  }
+
+  @Post('verify-reset-token')
+  async verifyResetToken(@Body() data: { email: string; token: string }) {
+    const user = await this.userService.findByEmail(data.email);
+    if (!user) {
+      return {
+        statusCode: 404,
+        message: 'User not found',
+      };
+    }
+
+    if (user.resetPasswordToken !== data.token) {
+      return {
+        statusCode: 401,
+        message: 'Invalid reset code',
+      };
+    }
+
+    if (user.resetPasswordExpires < new Date()) {
+      return {
+        statusCode: 401,
+        message: 'Reset code has expired',
+      };
+    }
+
+    return {
+      statusCode: 200,
+      message: 'Reset code is valid',
+    };
+  }
+
+  @Post('reset-password')
+  async resetPassword(
+    @Body('email') email: string,
+    @Body('newPassword') newPassword: string,
+  ) {
+    if (!email || !newPassword) {
+      return {
+        statusCode: 400,
+        message: 'Email and new password are required',
+      };
+    }
+
+    const user = await this.userService.findByEmail(email);
+    if (!user) {
+      return {
+        statusCode: 404,
+        message: 'User not found',
+      };
+    }
+
+    // Validate new password
+    if (
+      newPassword.length < 8 ||
+      !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(
+        newPassword,
+      )
+    ) {
+      return {
+        statusCode: 400,
+        message:
+          'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number and one special character',
+      };
+    }
+
+    const hashedPassword = await argon.hash(newPassword);
+
+    await this.userService.updateUser(user.id, {
+      hashPass: hashedPassword,
+      resetPasswordToken: null,
+      resetPasswordExpires: null,
+    });
+
+    return {
+      statusCode: 200,
+      message: 'Password reset successfully',
+    };
+  }
+
+  private generateSixDigitToken(): string {
+    return crypto.randomInt(100000, 999999).toString().padStart(6, '0');
+  }
+
+  @Post('time-remaining-reset-password')
+  async timeRemainingResetPassword(@Body() data: { email: string }) {
+    const user = await this.userService.findByEmail(data.email);
+    if (!user) {
+      return {
+        statusCode: 404,
+        message: 'User not found',
+      };
+    }
+    const timeRemaining = user.resetPasswordExpires
+      ? Math.max(
+          0,
+          Math.floor(
+            (user.resetPasswordExpires.getTime() - new Date().getTime()) / 1000,
           ),
         )
       : null;

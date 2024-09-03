@@ -32,10 +32,10 @@ export class EmailService {
     return template(context);
   }
 
-  async sendForgotPasswordEmail(to: string, token: string, username: string) {
+  async sendForgotPasswordEmail(to: string, token: string) {
     const context = {
       token,
-      username,
+
       expirationTime: '24 hours',
       supportEmail: 'support@example.com',
       resetLink: `http://your-frontend-url.com/reset-password?token=${token}`,

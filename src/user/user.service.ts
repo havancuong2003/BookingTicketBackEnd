@@ -10,12 +10,16 @@ import { UserDto } from './dto/user.dto';
 import * as argon2 from 'argon2';
 import { JwtService } from '@nestjs/jwt';
 import * as tokenService from '../utils/jwt-helper';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+
 interface JwtPayload {
   email: string;
   id: number;
   role: number;
   firstName: string;
 }
+
 @Injectable()
 export class UserService {
   constructor(
@@ -25,7 +29,12 @@ export class UserService {
 
   async login(data: { email: string; password: string }) {
     const user = await this.findByEmail(data.email);
-
+    if (user.hashPass == null) {
+      return {
+        statusCode: 401,
+        message: 'Password not set',
+      };
+    }
     if (!user) {
       return {
         statusCode: 401,
@@ -132,6 +141,7 @@ export class UserService {
       throw new UnauthorizedException('Invalid refresh token');
     }
   }
+
   async checkRoleLoginGG(email: string): Promise<string> {
     const user = await this.findByEmail(email);
 
@@ -143,5 +153,16 @@ export class UserService {
       where: { id: user.roleId },
     });
     return role.roleName;
+  }
+
+  async updateUser(
+    userId: number,
+    updateData: Partial<UserDto>,
+  ): Promise<UserDto> {
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+    });
+    return updatedUser;
   }
 }

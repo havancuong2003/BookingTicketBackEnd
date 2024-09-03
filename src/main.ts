@@ -13,7 +13,7 @@ async function bootstrap() {
   app.use(cookieParser()); // Đảm bảo cookie-parser được cấu hình
 
   app.enableCors({
-    origin: 'http://localhost:5173', // Địa chỉ của frontend React
+    origin: process.env.FRONTEND_URL, // Địa chỉ của frontend React
     credentials: true, // Cho phép gửi cookies cùng với yêu cầu
   });
 
