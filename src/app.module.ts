@@ -16,10 +16,25 @@ import { CinemaModule } from './cinema/cinema.module';
 import { RoomController } from './room/room.controller';
 import { RoomService } from './room/room.service';
 import { RoomModule } from './room/room.module';
+import { EmailModule } from './email/email.module';
+import { EmailService } from './email/email.service';
+import { MailerModule } from '@nestjs-modules/mailer';
+import { AuthService } from './auth/auth.service';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    MailerModule.forRoot({
+      transport: {
+        host: process.env.EMAIL_HOST,
+        port: Number(process.env.EMAIL_PORT),
+        secure: false,
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASSWORD,
+        },
+      },
+    }),
     AuthModule,
     UserModule,
     PrismaModule,
@@ -31,6 +46,7 @@ import { RoomModule } from './room/room.module';
     }),
     CinemaModule,
     RoomModule,
+    EmailModule,
   ],
   controllers: [UserController, RoomController],
   providers: [
@@ -40,6 +56,8 @@ import { RoomModule } from './room/room.module';
     RoleService,
     JwtService,
     RoomService,
+    EmailService,
+    AuthService,
   ],
 })
 export class AppModule implements NestModule {

@@ -1,16 +1,21 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
-import { AuthDto } from './dto';
+import { SignUpDto } from './dto';
 import * as argon from 'argon2';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { google } from 'googleapis';
 import * as fs from 'fs';
+import { UserService } from '../user/user.service';
+import { UserDto } from 'src/user/dto/user.dto';
+import * as crypto from 'crypto';
+
 @Injectable()
 export class AuthService {
   private oauth2Client = new google.auth.OAuth2(
@@ -21,6 +26,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
+    private readonly userService: UserService,
   ) {}
 
   async uploadVideo(accessToken: string, videoPath: string) {
@@ -69,5 +75,92 @@ export class AuthService {
         );
       }
     }
+  }
+
+  async signup(signUpDto: SignUpDto, roleID: number) {
+    console.log('signUpDto', signUpDto);
+
+    const userDto: UserDto = {
+      email: signUpDto.email,
+      hashPass: await argon.hash(signUpDto.password),
+      firstName: signUpDto.firstName,
+      lastName: signUpDto.lastName,
+      picture: null,
+      roleId: roleID,
+      phoneNumber: null,
+      isEmailVerified: false,
+      verificationToken: null,
+      verificationTokenExpires: null,
+      resetPasswordToken: null,
+      resetPasswordExpires: null,
+    };
+    return this.userService.create(userDto);
+  }
+
+  async generatePasswordResetToken(userId: number): Promise<string> {
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        resetPasswordToken: token,
+        resetPasswordExpires: expires,
+      },
+    });
+
+    return token;
+  }
+
+  async generateVerificationToken(email: string): Promise<string> {
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 2 * 60 * 1000); // 15 minutes from now
+
+    await this.prisma.user.update({
+      where: { email },
+      data: {
+        verificationToken: token,
+        verificationTokenExpires: expires,
+      },
+    });
+
+    return token;
+  }
+
+  async verifyEmail(email: string, token: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    if (user.isEmailVerified) {
+      throw new BadRequestException('Email is already verified');
+    }
+
+    if (
+      user.verificationToken !== token ||
+      user.verificationTokenExpires < new Date()
+    ) {
+      if (user.verificationToken !== token) {
+        console.log('user.verificationToken', user.verificationToken);
+        console.log('token', token);
+        console.log('Invalid verification token');
+      } else {
+        console.log('Verification token has expired');
+      }
+      throw new UnauthorizedException('Invalid or expired verification token');
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isEmailVerified: true,
+        verificationToken: null,
+        verificationTokenExpires: null,
+      },
+    });
   }
 }

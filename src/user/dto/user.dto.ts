@@ -1,4 +1,11 @@
-import { IsEmail, IsIn, IsInt, IsOptional, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsEmail,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsDate,
+} from 'class-validator';
 
 export class UserDto {
   @IsEmail()
@@ -24,4 +31,24 @@ export class UserDto {
   @IsInt()
   @IsOptional()
   roleId: number;
+
+  @IsBoolean()
+  @IsOptional()
+  isEmailVerified: boolean;
+
+  @IsString()
+  @IsOptional()
+  verificationToken: string | null;
+
+  @IsDate()
+  @IsOptional()
+  verificationTokenExpires: Date | null;
+
+  @IsString()
+  @IsOptional()
+  resetPasswordToken: string | null;
+
+  @IsDate()
+  @IsOptional()
+  resetPasswordExpires: Date | null;
 }
