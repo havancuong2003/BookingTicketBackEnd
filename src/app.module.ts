@@ -16,12 +16,29 @@ import { CinemaModule } from './cinema/cinema.module';
 import { RoomController } from './room/room.controller';
 import { RoomService } from './room/room.service';
 import { RoomModule } from './room/room.module';
-import { ScreeningService } from './screening/screening.service';
-import { ScreeningModule } from './screening/screening.module';
+import { MailerModule } from '@nestjs-modules/mailer';
+import { EmailModule } from './email/email.module';
+import { ScreeningModule, ScreeningService } from './screening';
+import { EmailService } from './email/email.service';
+import { AuthService } from './auth/auth.service';
+import { ChooseChairGateway } from './gateway';
+import { SeatService } from './seat/seat.service';
+import { SeatModule } from './seat/seat.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    MailerModule.forRoot({
+      transport: {
+        host: process.env.EMAIL_HOST,
+        port: Number(process.env.EMAIL_PORT),
+        secure: false,
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASSWORD,
+        },
+      },
+    }),
     AuthModule,
     UserModule,
     PrismaModule,
@@ -33,7 +50,9 @@ import { ScreeningModule } from './screening/screening.module';
     }),
     CinemaModule,
     RoomModule,
+    EmailModule,
     ScreeningModule,
+    SeatModule,
   ],
   controllers: [UserController, RoomController],
   providers: [
@@ -44,6 +63,10 @@ import { ScreeningModule } from './screening/screening.module';
     JwtService,
     RoomService,
     ScreeningService,
+    EmailService,
+    AuthService,
+    ChooseChairGateway,
+    SeatService,
   ],
 })
 export class AppModule implements NestModule {

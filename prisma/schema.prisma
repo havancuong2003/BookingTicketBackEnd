@@ -103,8 +103,8 @@ model Seat {
   screeningId  Int?
   seatNumber Int?     
   rowCode  String ? 
-  seatType   String ?  
-  status     Int ? 
+  seatType   Int ?  @default(0)
+  status     Int ? @default(0)
   userId     Int ?
 
 

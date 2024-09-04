@@ -12,33 +12,24 @@ export class UserController {
     private readonly roleService: RoleService,
   ) {}
 
-  @Post('register')
-  async register(@Body() data: any) {
-    // Kiểm tra email đã tồn tại
-    const existingUser = await this.userService.findByEmail(data.email);
-    if (existingUser) {
-      throw new ConflictException('Email already exists');
-    }
+  // @Post('register')
+  // async register(@Body() data: any) {
+  //   // Kiểm tra email đã tồn tại
+  //   const existingUser = await this.userService.findByEmail(data.email);
+  //   if (existingUser) {
+  //     throw new ConflictException('Email already exists');
+  //   }
 
-    const role = await this.roleService.findRole('user');
-    const hashpass = await argon2.hash(data.password);
-    return await this.userService.create({
-      email: data.email,
-      hashPass: hashpass,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      picture: null,
-      phoneNumber: null,
-      roleId: role.id,
-    });
-  }
-
-  @Get('getAll')
-  async getAll() {
-    return this.userService.getAll();
-  }
-  @Get('idByEmail/:email')
-  async getIdByEmail(@Param('email') email: string) {
-    return this.userService.getUserIdByEmail(email);
-  }
+  //   const role = await this.roleService.findRole('user');
+  //   const hashpass = await argon2.hash(data.password);
+  //   return await this.userService.create({
+  //     email: data.email,
+  //     hashPass: hashpass,
+  //     firstName: data.firstName,
+  //     lastName: data.lastName,
+  //     picture: null,
+  //     phoneNumber: null,
+  //     roleId: role.id,
+  //   });
+  // }
 }

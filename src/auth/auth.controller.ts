@@ -1,7 +1,7 @@
 import { generateToken } from './../utils/jwt-helper';
 import { UserService } from './../user/user.service';
 import { AuthService } from './auth.service';
-import { AuthDto } from './dto';
+import { SignUpDto } from './dto';
 
 import {
   Body,
@@ -18,6 +18,10 @@ import {
   UseGuards,
   UseInterceptors,
   NotFoundException,
+  ConflictException,
+  BadRequestException,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 
 import { Response, Request } from 'express';
@@ -29,6 +33,8 @@ import * as crypto from 'crypto';
 import { RoleService } from 'src/role/role.service';
 import { UserDto } from 'src/user/dto/user.dto';
 import * as tokenService from '../utils';
+import { EmailService } from 'src/email/email.service';
+import * as argon from 'argon2';
 interface JwtPayload {
   id: number;
   email: string;
@@ -41,6 +47,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly userService: UserService,
     private readonly roleService: RoleService,
+    private readonly emailService: EmailService,
   ) {
     if (!fs.existsSync(this.uploadDir)) {
       fs.mkdirSync(this.uploadDir, { recursive: true });
@@ -60,23 +67,62 @@ export class AuthController {
   async googleAuthRedirect(@Req() req, @Res() res: Response) {
     const user = req.user;
 
-    res.cookie('userGoogleToken', user.accessToken, {
-      httpOnly: true,
-      secure: false,
-      maxAge: 3600000,
-    });
     const existingUser = await this.userService.findByEmail(user.email);
 
-    let userData: JwtPayload;
-
     if (existingUser) {
-      userData = {
+      if (!existingUser.isEmailVerified) {
+        // User exists but email is not verified
+        await this.emailService.sendVerificationEmail(
+          existingUser.email,
+          existingUser,
+        );
+        return res.redirect(
+          `${process.env.FRONTEND_URL}/verify-email?email=${existingUser.email}`,
+        );
+      }
+
+      // User exists and email is verified, proceed with login
+      const userData: JwtPayload = {
         id: existingUser.id,
         email: existingUser.email,
         firstName: existingUser.firstName,
         role: existingUser.roleId,
       };
+
+      const accessToken = await tokenService.generateToken(
+        userData,
+        process.env.ACCESS_TOKEN_SECRET,
+        process.env.ACCESS_TOKEN_LIFE,
+      );
+      const refreshToken = await tokenService.generateToken(
+        userData,
+        process.env.REFRESH_TOKEN_SECRET,
+        process.env.REFRESH_TOKEN_LIFE,
+      );
+
+      // Set cookies
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: false,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+
+      res.cookie('accessToken', accessToken, {
+        httpOnly: false,
+        secure: false,
+        maxAge: 15 * 60 * 1000, // 15 minutes
+      });
+
+      // Redirect to appropriate page
+      const adminRole = await this.roleService.findRole('admin');
+      const redirectUrl =
+        userData.role === adminRole.id
+          ? `${process.env.FRONTEND_URL}/dashboard`
+          : `${process.env.FRONTEND_URL}`;
+
+      return res.redirect(redirectUrl);
     } else {
+      // New user, create account and send verification email
       const role = await this.roleService.findRole('user');
       const newUser = await this.userService.create({
         email: user.email,
@@ -86,49 +132,21 @@ export class AuthController {
         picture: user.picture,
         phoneNumber: user.phoneNumber,
         roleId: role.id,
+        isEmailVerified: false,
+        verificationToken: null,
+        verificationTokenExpires: null,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
       });
 
-      userData = {
-        id: newUser.id,
-        email: newUser.email,
-        firstName: newUser.firstName,
-        role: newUser.roleId,
-      };
+      // Send verification email
+      await this.emailService.sendVerificationEmail(newUser.email, newUser);
+
+      // Redirect to verification page
+      return res.redirect(
+        `${process.env.FRONTEND_URL}/verify-email?email=${newUser.email}`,
+      );
     }
-
-    const accessToken = await tokenService.generateToken(
-      userData,
-      process.env.ACCESS_TOKEN_SECRET,
-      process.env.ACCESS_TOKEN_LIFE,
-    );
-    const refreshToken = await tokenService.generateToken(
-      userData,
-      process.env.REFRESH_TOKEN_SECRET,
-      process.env.REFRESH_TOKEN_LIFE,
-    );
-
-    // Set refresh token in HTTP-only cookie
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: false,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
-    // Set access token in a secure, short-lived cookie
-    res.cookie('accessToken', accessToken, {
-      httpOnly: false, // Allow JavaScript access
-      secure: false,
-      maxAge: 15 * 60 * 1000, // 15 minutes
-    });
-
-    // Redirect to frontend without tokens in URL
-    const adminRole = await this.roleService.findRole('admin');
-    const redirectUrl =
-      userData.role === adminRole.id
-        ? 'http://localhost:5173/dashboard'
-        : 'http://localhost:5173';
-
-    return res.redirect(redirectUrl);
   }
 
   @Post('logout')
@@ -154,22 +172,33 @@ export class AuthController {
 
   @Post('login')
   async login(
-    @Body() data: any,
+    @Body() data: { email: string; password: string },
     @Res({ passthrough: true }) res: Response,
-    @Req() req: Request,
   ) {
-    const dataBack = await this.userService.login(data);
+    const loginResult = await this.userService.login(data);
 
-    res.cookie('refreshToken', dataBack.token.refreshToken, {
+    if (loginResult.statusCode !== 200) {
+      return loginResult; // Trả về kết quả lỗi trực tiếp
+    }
+
+    // Xử lý đăng nhập thành công
+    res.cookie('refreshToken', loginResult.token.refreshToken, {
       httpOnly: true,
       secure: false,
-      maxAge: 3600000,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    res.cookie('accessToken', loginResult.token.accessToken, {
+      httpOnly: false,
+      secure: false,
+      maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
     return {
-      statusCode: 200,
-      message: 'Login successful',
-      accessToken: dataBack.token.accessToken, // Trả về access token
+      statusCode: loginResult.statusCode,
+      message: loginResult.message,
+      accessToken: loginResult.token.accessToken,
+      user: loginResult.user,
     };
   }
 
@@ -266,8 +295,272 @@ export class AuthController {
     return `${baseName}-${uniqueSuffix}${ext}`;
   }
 
-  //   @Post('signup')
-  //   signup(@Body() dto: AuthDto) {
-  //     return this.authService.signup(dto);
-  //   }
+  @Post('signup')
+  async signup(@Body() signUpDto: SignUpDto) {
+    try {
+      const role = await this.roleService.findRole('user');
+      const newUser = await this.authService.signup(signUpDto, role.id);
+      console.log('newUser', newUser);
+      await this.emailService.sendVerificationEmail(newUser.email, newUser);
+      return {
+        statusCode: 201,
+        message:
+          'User registered successfully, please check your email to verify your account',
+        user: newUser,
+      };
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        throw error;
+      }
+      if (error.status === 400) {
+        throw new BadRequestException(error.response.message);
+      }
+      throw new InternalServerErrorException('Something went wrong');
+    }
+  }
+
+  @Post('send-verification-email')
+  async sendVerificationEmail(@Body() data: { email: string }) {
+    const user = await this.userService.findByEmail(data.email);
+    if (!user) {
+      return {
+        statusCode: 404,
+        message: 'User not found',
+      };
+    }
+    console.log('user', user);
+
+    if (user.isEmailVerified) {
+      return {
+        statusCode: 400,
+        message: 'Email is already verified',
+      };
+    }
+    await this.emailService.sendVerificationEmail(user.email, user);
+    return {
+      statusCode: 200,
+      message: 'Verification email sent successfully',
+    };
+  }
+
+  @Post('verify-email')
+  async verifyEmail(@Body() data: { email: string; token: string }) {
+    try {
+      const user = await this.userService.findByEmail(data.email);
+      if (!user) {
+        return {
+          statusCode: 404,
+          message: 'User not found',
+        };
+      }
+      if (user.isEmailVerified) {
+        return {
+          statusCode: 400,
+          message: 'Email is already verified',
+        };
+      }
+      if (user.verificationToken !== data.token) {
+        return {
+          statusCode: 400,
+          message: 'Invalid verification token',
+        };
+      }
+      if (user.verificationTokenExpires < new Date()) {
+        return {
+          statusCode: 400,
+          message: 'Verification token has expired',
+        };
+      }
+
+      await this.userService.updateUser(user.id, {
+        isEmailVerified: true,
+        verificationToken: null,
+        verificationTokenExpires: null,
+      });
+
+      return {
+        statusCode: 200,
+        message: 'Email verified successfully',
+      };
+    } catch (error) {
+      console.error('Error verifying email:', error);
+      return {
+        statusCode: 500,
+        message: 'An error occurred while verifying email',
+      };
+    }
+  }
+
+  @Post('time-remaining-verify')
+  async timeRemainingVerify(@Body() data: { email: string }) {
+    const user = await this.userService.findByEmail(data.email);
+    if (!user) {
+      return {
+        statusCode: 404,
+        message: 'User not found',
+      };
+    }
+    const timeRemaining = user.verificationTokenExpires
+      ? Math.max(
+          0,
+          Math.floor(
+            (user.verificationTokenExpires.getTime() - new Date().getTime()) /
+              1000,
+          ),
+        )
+      : null;
+    return {
+      statusCode: 200,
+      message: 'Time remaining verify',
+      timeRemaining: timeRemaining,
+    };
+  }
+
+  @Post('request-reset-password')
+  async requestResetPassword(@Body() data: { email: string }) {
+    const user = await this.userService.findByEmail(data.email);
+    if (!user) {
+      return {
+        statusCode: 404,
+        message: 'User not found',
+      };
+    }
+
+    const now = new Date();
+    if (
+      user.resetPasswordToken &&
+      user.resetPasswordExpires &&
+      user.resetPasswordExpires > now
+    ) {
+      // Token still valid
+      return {
+        statusCode: 200,
+        message:
+          'Reset token is still valid. Please check your email for the existing code.',
+      };
+    }
+
+    // Token expired or doesn't exist, generate new one
+    const resetToken = this.generateSixDigitToken();
+    const resetTokenExpires = new Date(now.getTime() + 15 * 60 * 1000); // 15 minutes
+
+    await this.userService.updateUser(user.id, {
+      resetPasswordToken: resetToken,
+      resetPasswordExpires: resetTokenExpires,
+    });
+
+    await this.emailService.sendForgotPasswordEmail(user.email, resetToken);
+
+    return {
+      statusCode: 200,
+      message:
+        'New password reset code sent successfully. Please check your email.',
+    };
+  }
+
+  @Post('verify-reset-token')
+  async verifyResetToken(@Body() data: { email: string; token: string }) {
+    const user = await this.userService.findByEmail(data.email);
+    if (!user) {
+      return {
+        statusCode: 404,
+        message: 'User not found',
+      };
+    }
+
+    if (user.resetPasswordToken !== data.token) {
+      return {
+        statusCode: 401,
+        message: 'Invalid reset code',
+      };
+    }
+
+    if (user.resetPasswordExpires < new Date()) {
+      return {
+        statusCode: 401,
+        message: 'Reset code has expired',
+      };
+    }
+
+    return {
+      statusCode: 200,
+      message: 'Reset code is valid',
+    };
+  }
+
+  @Post('reset-password')
+  async resetPassword(
+    @Body('email') email: string,
+    @Body('newPassword') newPassword: string,
+  ) {
+    if (!email || !newPassword) {
+      return {
+        statusCode: 400,
+        message: 'Email and new password are required',
+      };
+    }
+
+    const user = await this.userService.findByEmail(email);
+    if (!user) {
+      return {
+        statusCode: 404,
+        message: 'User not found',
+      };
+    }
+
+    // Validate new password
+    if (
+      newPassword.length < 8 ||
+      !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(
+        newPassword,
+      )
+    ) {
+      return {
+        statusCode: 400,
+        message:
+          'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number and one special character',
+      };
+    }
+
+    const hashedPassword = await argon.hash(newPassword);
+
+    await this.userService.updateUser(user.id, {
+      hashPass: hashedPassword,
+      resetPasswordToken: null,
+      resetPasswordExpires: null,
+    });
+
+    return {
+      statusCode: 200,
+      message: 'Password reset successfully',
+    };
+  }
+
+  private generateSixDigitToken(): string {
+    return crypto.randomInt(100000, 999999).toString().padStart(6, '0');
+  }
+
+  @Post('time-remaining-reset-password')
+  async timeRemainingResetPassword(@Body() data: { email: string }) {
+    const user = await this.userService.findByEmail(data.email);
+    if (!user) {
+      return {
+        statusCode: 404,
+        message: 'User not found',
+      };
+    }
+    const timeRemaining = user.resetPasswordExpires
+      ? Math.max(
+          0,
+          Math.floor(
+            (user.resetPasswordExpires.getTime() - new Date().getTime()) / 1000,
+          ),
+        )
+      : null;
+    return {
+      statusCode: 200,
+      message: 'Time remaining verify',
+      timeRemaining: timeRemaining,
+    };
+  }
 }

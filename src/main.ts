@@ -10,19 +10,10 @@ dotenv.config();
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // app.use(
-  //   session({
-  //     secret: process.env.SESSION_SECRET || 'verysecretkey',
-  //     resave: false,
-  //     saveUninitialized: false,
-  //     cookie: { maxAge: 72000, httpOnly: true, secure: false },
-  //   }),
-  // );
-
   app.use(cookieParser()); // Đảm bảo cookie-parser được cấu hình
 
   app.enableCors({
-    origin: 'http://localhost:5173', // Địa chỉ của frontend React
+    origin: process.env.FRONTEND_URL, // Địa chỉ của frontend React
     credentials: true, // Cho phép gửi cookies cùng với yêu cầu
   });
 
@@ -30,6 +21,11 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
     }),
   );
 

@@ -11,13 +11,14 @@ type Seat = {
   status: number; // 0 - available, 1 - reserved, 2 - chosen
 };
 
-@WebSocketGateway(3000, { cors: '*' })
-export class className {
+@WebSocketGateway(3001, { cors: '*' })
+export class ChooseChairGateway {
   @WebSocketServer()
   server;
 
   @SubscribeMessage('updateStatus')
   handleStatusUpdate(@MessageBody() data: { id: number; status: boolean }) {
+    // Phát thông báo đến tất cả các client về thay đổi trạng thái
     this.server.emit('statusUpdated', data);
   }
 }
