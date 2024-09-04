@@ -42,7 +42,6 @@ import { AuthService } from './auth/auth.service';
     RoleModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'secret',
-      signOptions: { expiresIn: '1h' },
     }),
     CinemaModule,
     RoomModule,
