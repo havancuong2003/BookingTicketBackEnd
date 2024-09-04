@@ -1,4 +1,9 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { AuthDto } from './dto';
@@ -19,35 +24,50 @@ export class AuthService {
   ) {}
 
   async uploadVideo(accessToken: string, videoPath: string) {
-    this.oauth2Client.setCredentials({ access_token: accessToken });
+    try {
+      this.oauth2Client.setCredentials({ access_token: accessToken });
+      const drive = google.drive({ version: 'v3', auth: this.oauth2Client });
+      const videoFile = fs.createReadStream(videoPath);
 
-    const drive = google.drive({ version: 'v3', auth: this.oauth2Client });
+      const response = await drive.files.create({
+        requestBody: {
+          name: 'Uploaded Video',
+          mimeType: 'video/mp4',
+          parents: [process.env.FOLDER_ID_UPLOAD_TRAILER],
+        },
+        media: {
+          mimeType: 'video/mp4',
+          body: videoFile,
+        },
+        fields: 'id',
+      });
 
-    const videoFile = fs.createReadStream(videoPath);
+      const fileId = response.data.id;
+      await drive.permissions.create({
+        fileId: fileId,
+        requestBody: {
+          role: 'reader',
+          type: 'anyone',
+        },
+      });
 
-    const response = await drive.files.create({
-      requestBody: {
-        name: 'Uploaded Video',
-        mimeType: 'video/mp4', // Cần thay đổi nếu video có định dạng khác
-        parents: ['1J8T36q2dpA-Q70Df8XjqVIAvZiV6Fpw_'],
-      },
-      media: {
-        mimeType: 'video/mp4', // Cần thay đổi nếu video có định dạng khác
-        body: videoFile,
-      },
-      fields: 'id', // Trả về ID của file sau khi upload
-    });
+      fs.unlinkSync(videoPath);
+      return response.data;
+    } catch (error) {
+      fs.unlinkSync(videoPath); // Xóa file tạm nếu upload thất bại
+      console.error('Lỗi khi upload file:', error);
 
-    const fileId = response.data.id;
-    await drive.permissions.create({
-      fileId: fileId,
-      requestBody: {
-        role: 'reader',
-        type: 'anyone',
-      },
-    });
-    fs.unlinkSync(videoPath); // Xóa file sau khi upload
-
-    return response.data;
+      if (error.code === 403) {
+        throw new ForbiddenException('Không có quyền upload vào thư mục này');
+      } else if (error.code === 401) {
+        throw new ForbiddenException('Token không hợp lệ hoặc đã hết hạn');
+      } else if (error.message.includes('File not found')) {
+        throw new NotFoundException('Không tìm thấy thư mục để upload');
+      } else {
+        throw new InternalServerErrorException(
+          'Không thể upload file lên Google Drive: ' + error.message,
+        );
+      }
+    }
   }
 }

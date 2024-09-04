@@ -3,7 +3,13 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { UserDto } from './dto/user.dto';
 import * as argon2 from 'argon2';
 import { JwtService } from '@nestjs/jwt';
-
+import * as tokenService from '../utils/jwt-helper';
+interface JwtPayload {
+  email: string;
+  id: number;
+  role: number;
+  firstName: string;
+}
 @Injectable()
 export class UserService {
   constructor(
@@ -34,36 +40,59 @@ export class UserService {
     if (await argon2.verify(user.hashPass, data.password)) {
       delete user.hashPass; // Xóa mật khẩu khỏi đối tượng người dùng
 
-      const payload = {
+      const userData: JwtPayload = {
+        id: user.id,
         email: user.email,
         firstName: user.firstName,
-        lastName: user.lastName,
-        sub: user.id,
         role: user.roleId,
       };
-      const accessToken = this.jwt.sign(payload, {
-        secret: process.env.JWT_SECRET,
-        expiresIn: '1h',
-      });
-      const role = await this.prisma.role.findUnique({
-        where: { id: user.roleId },
-      });
+      const accessToken = await tokenService.generateToken(
+        userData,
+        process.env.ACCESS_TOKEN_SECRET,
+        process.env.ACCESS_TOKEN_LIFE,
+      );
+
+      const refreshToken = await tokenService.generateToken(
+        userData,
+        process.env.REFRESH_TOKEN_SECRET,
+        process.env.REFRESH_TOKEN_LIFE,
+      );
 
       return {
         statusCode: 200,
         message: 'Login successful',
-        user: {
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          token: accessToken,
-          role: role.roleName,
+        token: {
+          accessToken: accessToken,
+          refreshToken: refreshToken,
         },
       };
     }
     throw new UnauthorizedException('Invalid password');
   }
 
+  async refreshAccessToken(refreshToken: string): Promise<string> {
+    try {
+      const payload = await tokenService.verifyToken(
+        refreshToken,
+        process.env.REFRESH_TOKEN_SECRET,
+      );
+
+      const newPayload: JwtPayload = {
+        email: payload.email,
+        id: payload.id,
+        role: payload.role,
+        firstName: payload.firstName,
+      };
+
+      return await tokenService.generateToken(
+        newPayload,
+        process.env.ACCESS_TOKEN_SECRET,
+        process.env.ACCESS_TOKEN_LIFE,
+      );
+    } catch (error) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
   async checkRoleLoginGG(email: string): Promise<string> {
     const user = await this.findByEmail(email);
 

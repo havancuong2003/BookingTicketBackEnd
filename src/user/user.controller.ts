@@ -3,6 +3,8 @@ import { UserService } from './user.service';
 import * as argon2 from 'argon2';
 import { RoleService } from 'src/role/role.service';
 import { Response, Request } from 'express';
+import { ConflictException } from '@nestjs/common';
+
 @Controller('user')
 export class UserController {
   constructor(
@@ -12,7 +14,11 @@ export class UserController {
 
   @Post('register')
   async register(@Body() data: any) {
-    console.log('data:', data);
+    // Kiểm tra email đã tồn tại
+    const existingUser = await this.userService.findByEmail(data.email);
+    if (existingUser) {
+      throw new ConflictException('Email already exists');
+    }
 
     const role = await this.roleService.findRole('user');
     const hashpass = await argon2.hash(data.password);
@@ -26,23 +32,6 @@ export class UserController {
       roleId: role.id,
     });
   }
-
-  // @Post('login')
-  // async login(@Body() data: any, @Req() request: Request) {
-  //   const dataBack = await this.userService.login(data);
-  //   request.session.accessToken = dataBack.user.token;
-  //   console.log('dataBack:', request.session);
-  //   return dataBack;
-  // }
-
-  // @Get('test')
-  // findAll(@Req() request: Request) {
-  //   const visits = request.session.visits || 0;
-  //   request.session.visits = visits + 1;
-  //   console.log('visits:', visits);
-
-  //   return { visits: request.session.visits };
-  // }
 
   @Get('getAll')
   async getAll() {
