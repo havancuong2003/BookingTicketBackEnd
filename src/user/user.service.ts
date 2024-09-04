@@ -29,7 +29,9 @@ export class UserService {
 
   async login(data: { email: string; password: string }) {
     const user = await this.findByEmail(data.email);
-    if (user.hashPass == null) {
+    console.log('check hashPass', !user.hashPass);
+
+    if (!user.hashPass) {
       return {
         statusCode: 401,
         message: 'Password not set',
