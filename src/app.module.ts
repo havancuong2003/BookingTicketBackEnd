@@ -46,7 +46,6 @@ import { SeatModule } from './seat/seat.module';
     RoleModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'secret',
-      signOptions: { expiresIn: '1h' },
     }),
     CinemaModule,
     RoomModule,

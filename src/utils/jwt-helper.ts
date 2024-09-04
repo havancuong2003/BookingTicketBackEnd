@@ -4,6 +4,7 @@ interface JwtPayload {
   id: number;
   role: number;
   firstName: string;
+  exp?: number; // Thêm trường này
 }
 export const generateToken = (
   user: JwtPayload,
@@ -38,6 +39,22 @@ export const verifyToken = (
         reject(err);
       } else {
         resolve(decoded as JwtPayload);
+      }
+    });
+  });
+};
+
+export const getTokenExpirationTime = (
+  token: string,
+  secret: string,
+): Promise<number> => {
+  return new Promise((resolve, reject) => {
+    Jwt.verify(token, secret, (err, decoded) => {
+      if (err) {
+        reject(err);
+      } else {
+        const payload = decoded as JwtPayload;
+        resolve(payload.exp || 0);
       }
     });
   });
