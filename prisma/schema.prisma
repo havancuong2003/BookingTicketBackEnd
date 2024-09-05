@@ -98,7 +98,7 @@ seats Seat[]
 
 
 model Seat {
-  seatId     Int     @id // Primary Key: ID ghế
+  seatId     Int     @id @default(autoincrement())
   roomId  Int?
   screeningId  Int?
   seatNumber Int?     
@@ -107,8 +107,7 @@ model Seat {
   status     Int ? @default(0)
   userId     Int ?
 
-
  user User? @relation(fields: [userId], references: [id])
   screening  Screening? @relation(fields: [screeningId], references: [screeningId])
-  room        Room?     @relation(fields: [roomId], references: [roomId])// Optional: Maps the table name in the database
+  room        Room?     @relation(fields: [roomId], references: [roomId])
 }

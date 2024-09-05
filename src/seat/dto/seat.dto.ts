@@ -17,7 +17,7 @@ export class SeatDTO {
   rowCode: string;
 
   @IsNumber()
-  seattype: number;
+  seatType: number;
 
   @IsNumber()
   status: number;

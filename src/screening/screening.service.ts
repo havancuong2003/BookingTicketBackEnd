@@ -32,4 +32,12 @@ export class ScreeningService {
   async findById(screeningId: number) {
     return this.prismaService.screening.findUnique({ where: { screeningId } });
   }
+
+  async getRoomIdByScreeningId(screeningId: number) {
+    const roomId = await this.prismaService.screening.findUnique({
+      where: { screeningId },
+      select: { roomId: true },
+    });
+    return roomId;
+  }
 }

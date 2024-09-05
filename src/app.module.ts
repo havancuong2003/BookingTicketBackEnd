@@ -24,6 +24,8 @@ import { AuthService } from './auth/auth.service';
 import { ChooseChairGateway } from './gateway';
 import { SeatService } from './seat/seat.service';
 import { SeatModule } from './seat/seat.module';
+import { ChooseChairController } from './choose_chair/choose_chair.controller';
+import { ChooseChairModule } from './choose_chair/choose_chair.module';
 
 @Module({
   imports: [
@@ -52,8 +54,9 @@ import { SeatModule } from './seat/seat.module';
     EmailModule,
     ScreeningModule,
     SeatModule,
+    ChooseChairModule,
   ],
-  controllers: [UserController, RoomController],
+  controllers: [UserController, RoomController, ChooseChairController],
   providers: [
     PrismaService,
     CinemaService,
