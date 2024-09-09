@@ -35,7 +35,6 @@ import { UserDto } from 'src/user/dto/user.dto';
 import * as tokenService from '../utils';
 import { EmailService } from 'src/email/email.service';
 import * as argon from 'argon2';
-import { JwtAuthGuard } from './strategy/jwt-auth.guard';
 interface JwtPayload {
   id: number;
   email: string;
@@ -67,11 +66,7 @@ export class AuthController {
   @UseGuards(GoogleOAuthGuard)
   async googleAuthRedirect(@Req() req, @Res() res: Response) {
     const user = req.user;
-    res.cookie('userGoogleToken', user.accessToken, {
-      httpOnly: true,
-      secure: false,
-      maxAge: 10 * 60 * 1000, // 10 minutes
-    });
+
     const existingUser = await this.userService.findByEmail(user.email);
 
     if (existingUser) {
@@ -93,6 +88,7 @@ export class AuthController {
         firstName: existingUser.firstName,
         role: existingUser.roleId,
       };
+
       const accessToken = await tokenService.generateToken(
         userData,
         process.env.ACCESS_TOKEN_SECRET,
@@ -108,13 +104,13 @@ export class AuthController {
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: false,
-        maxAge: 3 * 60 * 1000, //  3 minutes
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
       res.cookie('accessToken', accessToken, {
         httpOnly: false,
         secure: false,
-        maxAge: 1 * 60 * 1000, // 1 minutes
+        maxAge: 15 * 60 * 1000, // 15 minutes
       });
 
       // Redirect to appropriate page
@@ -189,13 +185,13 @@ export class AuthController {
     res.cookie('refreshToken', loginResult.token.refreshToken, {
       httpOnly: true,
       secure: false,
-      maxAge: 3 * 60 * 1000, // 3 minutes
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     res.cookie('accessToken', loginResult.token.accessToken, {
       httpOnly: false,
       secure: false,
-      maxAge: 1 * 60 * 1000, // 1 minutes
+      maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
     return {
@@ -212,7 +208,6 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const refreshToken = req.cookies.refreshToken;
-    console.log('check refreshToken', refreshToken);
 
     if (!refreshToken) {
       throw new UnauthorizedException('No refresh token provided');
@@ -472,7 +467,6 @@ export class AuthController {
         message: 'User not found',
       };
     }
-    console.log('check token', user.resetPasswordToken, data.token);
 
     if (user.resetPasswordToken !== data.token) {
       return {
@@ -570,93 +564,26 @@ export class AuthController {
     };
   }
 
-  @Post('test-re-generate-accesstoken')
-  async regenerateAccessToken(@Req() req: Request) {
-    const refreshToken = req.cookies.refreshToken;
-    console.log('Received refresh token:', refreshToken);
-
-    if (!refreshToken) {
-      throw new UnauthorizedException('No refresh token provided');
+  @Post('/getInfor')
+  async GetInforUser(@Req() req: Request) {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      throw new UnauthorizedException('No token provided');
     }
 
     try {
-      // Verify the refresh token
-      await tokenService.verifyToken(
-        refreshToken,
-        process.env.REFRESH_TOKEN_SECRET,
+      const decoded = await tokenService.verifyToken(
+        token,
+        process.env.ACCESS_TOKEN_SECRET,
       );
-
-      // Generate new access token
-      const newAccessToken =
-        await this.userService.refreshAccessToken(refreshToken);
-
       return {
-        statusCode: 200,
-        accessToken: newAccessToken,
-        message: 'Access token has been refreshed',
+        id: decoded.id,
+        email: decoded.email,
+        firstName: decoded.firstName,
+        role: decoded.role,
       };
     } catch (error) {
-      console.error('Error processing refresh token:', error);
-      if (error.name === 'TokenExpiredError') {
-        throw new UnauthorizedException(
-          'Refresh token expired. Please login again.',
-        );
-      }
-      if (error.name === 'JsonWebTokenError') {
-        throw new UnauthorizedException('Invalid refresh token');
-      }
-      throw new InternalServerErrorException(
-        'An error occurred while processing the token',
-      );
+      throw new UnauthorizedException('Invalid token');
     }
-  }
-
-  @Post('check-refresh-token-expiration')
-  async checkRefreshTokenExpiration(@Req() req: Request) {
-    const refreshToken = req.cookies.refreshToken;
-    console.log('Received refresh token:', refreshToken);
-
-    if (!refreshToken) {
-      throw new UnauthorizedException('No refresh token provided');
-    }
-
-    try {
-      const expirationTime = await tokenService.getTokenExpirationTime(
-        refreshToken,
-        process.env.REFRESH_TOKEN_SECRET,
-      );
-
-      const now = Math.floor(Date.now() / 1000);
-      const timeRemaining = expirationTime - now;
-
-      return {
-        statusCode: 200,
-        message: 'Refresh token expiration details',
-        expirationTime: new Date(expirationTime * 1000).toISOString(),
-        timeRemaining:
-          timeRemaining > 0 ? `${timeRemaining} seconds` : 'Expired',
-      };
-    } catch (error) {
-      console.error('Error checking refresh token:', error);
-      if (error.name === 'TokenExpiredError') {
-        throw new UnauthorizedException('Refresh token has expired');
-      }
-      if (error.name === 'JsonWebTokenError') {
-        throw new UnauthorizedException('Invalid refresh token');
-      }
-      throw new InternalServerErrorException(
-        'An error occurred while processing the token',
-      );
-    }
-  }
-
-  @Get('test-auth')
-  @UseGuards(JwtAuthGuard)
-  async testAuth(@Req() req: Request) {
-    // JwtAuthGuard sẽ xử lý việc kiểm tra token
-    return {
-      statusCode: 200,
-      message: 'You are authenticated',
-    };
   }
 }

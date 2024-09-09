@@ -42,8 +42,6 @@ export class RoomController {
 
   @Get('details/:id')
   async findById(@Param('id') roomId: string) {
-    console.log('roomId:', roomId);
-
     return this.roomService.findById(Number(roomId));
   }
 }

@@ -16,10 +16,16 @@ import { CinemaModule } from './cinema/cinema.module';
 import { RoomController } from './room/room.controller';
 import { RoomService } from './room/room.service';
 import { RoomModule } from './room/room.module';
-import { EmailModule } from './email/email.module';
-import { EmailService } from './email/email.service';
 import { MailerModule } from '@nestjs-modules/mailer';
+import { EmailModule } from './email/email.module';
+import { ScreeningModule, ScreeningService } from './screening';
+import { EmailService } from './email/email.service';
 import { AuthService } from './auth/auth.service';
+import { ChooseChairGateway } from './gateway';
+import { SeatService } from './seat/seat.service';
+import { SeatModule } from './seat/seat.module';
+import { ChooseChairController } from './choose_chair/choose_chair.controller';
+import { ChooseChairModule } from './choose_chair/choose_chair.module';
 
 @Module({
   imports: [
@@ -46,8 +52,11 @@ import { AuthService } from './auth/auth.service';
     CinemaModule,
     RoomModule,
     EmailModule,
+    ScreeningModule,
+    SeatModule,
+    ChooseChairModule,
   ],
-  controllers: [UserController, RoomController],
+  controllers: [UserController, RoomController, ChooseChairController],
   providers: [
     PrismaService,
     CinemaService,
@@ -55,8 +64,11 @@ import { AuthService } from './auth/auth.service';
     RoleService,
     JwtService,
     RoomService,
+    ScreeningService,
     EmailService,
     AuthService,
+    ChooseChairGateway,
+    SeatService,
   ],
 })
 export class AppModule implements NestModule {

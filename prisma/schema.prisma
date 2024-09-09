@@ -35,7 +35,7 @@ model User{
   resetPasswordExpires DateTime?
   createdAt DateTime? @default(now())
   updatedAt DateTime? @updatedAt
-
+  seats Seat[]
 }
 
 model Movie {
@@ -62,7 +62,9 @@ model Cinema {
   totalScreens Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
   rooms Room[]
+  screenings  Screening[]
 }
 
 
@@ -72,5 +74,40 @@ model Room {
   roomId    Int      @id @default(autoincrement())
   roomCode  String?
   cinemaId Int?
+
   cinema Cinema? @relation(fields: [cinemaId],references: [cinemaId])
+  screenings  Screening[]
+  seats Seat[]
+}
+
+
+model Screening {
+  screeningId Int      @id @default(autoincrement())
+  movieId     Int?
+  cinemaId    Int?
+  roomId      Int?
+  startTime   DateTime?
+  endTime     DateTime?
+  createdAt   DateTime? @default(now())
+  updatedAt   DateTime? @updatedAt
+
+seats Seat[]
+  cinema      Cinema?    @relation(fields: [cinemaId], references: [cinemaId])
+  room        Room?     @relation(fields: [roomId], references: [roomId])
+}
+
+
+model Seat {
+  seatId     Int     @id @default(autoincrement())
+  roomId  Int?
+  screeningId  Int?
+  seatNumber Int?     
+  rowCode  String ? 
+  seatType   Int ?  @default(0)
+  status     Int ? @default(0)
+  userId     Int ?
+
+ user User? @relation(fields: [userId], references: [id])
+  screening  Screening? @relation(fields: [screeningId], references: [screeningId])
+  room        Room?     @relation(fields: [roomId], references: [roomId])
 }
