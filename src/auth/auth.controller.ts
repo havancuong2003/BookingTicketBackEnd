@@ -563,4 +563,27 @@ export class AuthController {
       timeRemaining: timeRemaining,
     };
   }
+
+  @Post('/getInfor')
+  async GetInforUser(@Req() req: Request) {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      throw new UnauthorizedException('No token provided');
+    }
+
+    try {
+      const decoded = await tokenService.verifyToken(
+        token,
+        process.env.ACCESS_TOKEN_SECRET,
+      );
+      return {
+        id: decoded.id,
+        email: decoded.email,
+        firstName: decoded.firstName,
+        role: decoded.role,
+      };
+    } catch (error) {
+      throw new UnauthorizedException('Invalid token');
+    }
+  }
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Put } from '@nestjs/common';
+import { Body, Controller, Get, Param, Put } from '@nestjs/common';
 import { SeatService } from './seat.service';
 import { SeatDTO } from './dto';
 
@@ -12,7 +12,21 @@ export class SeatController {
   }
 
   @Put('updatestatus/:seatId')
-  async update(@Param('seatId') seatId: number, data: SeatDTO) {
-    return this.seatService.updateStatus(seatId, data);
+  async update(@Param('seatId') seatId: number, @Body() data: SeatDTO) {
+    return this.seatService.updateStatus(Number(seatId), data);
+  }
+
+  @Get('findSeatsByUserId/:userId')
+  async findSeatsByUserId(@Param('userId') userId: number) {
+    return this.seatService.findSeatsByUserId(Number(userId));
+  }
+  @Get('findSeatsDoneByUserId/:userId')
+  async findSeatsDoneByUserId(@Param('userId') userId: number) {
+    return this.seatService.findSeatsDoneByUserId(Number(userId));
+  }
+
+  @Put('updateStatusByUserIdToDefault/:userId')
+  async updateStatusByUserIdToDefault(@Param('userId') userId: number) {
+    return this.seatService.updateStatusByUserIdToDefault(Number(userId));
   }
 }

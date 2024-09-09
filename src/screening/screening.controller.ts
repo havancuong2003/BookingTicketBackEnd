@@ -40,4 +40,9 @@ export class ScreeningController {
   async delete(@Param('screeningId') screeningId: string) {
     return this.screeningService.delete(Number(screeningId));
   }
+
+  @Get('inforScreening/:screeningId')
+  async getSeatDetails(@Param('screeningId') screeningId: number) {
+    return this.screeningService.getAllInforScreening(Number(screeningId));
+  }
 }

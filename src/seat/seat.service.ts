@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { SeatDTO } from './dto';
 import { Repository } from 'typeorm';
 import { Seat } from '@prisma/client';
 import { ScreeningService } from 'src/screening';
+import { IsNumber } from 'class-validator';
 
 @Injectable()
 export class SeatService {
@@ -30,7 +31,7 @@ export class SeatService {
   async createSeatsForScreening(screeningId: number) {
     const rows = ['A', 'B', 'C', 'D', 'E', 'F'];
     const seats = [];
-    const idRoom = await this.prismaService.screening.findUnique({
+    const screening = await this.prismaService.screening.findUnique({
       where: { screeningId },
       select: { roomId: true },
     });
@@ -43,7 +44,7 @@ export class SeatService {
           seatType,
           status: 0,
           screeningId,
-          roomId: idRoom,
+          roomId: screening.roomId,
         };
         seats.push(seat);
       }
@@ -54,28 +55,60 @@ export class SeatService {
     });
   }
 
-  async updateToDefault(seatId: number, data: SeatDTO) {
-    data.userId = null;
-    data.status = 0;
-    return this.prismaService.seat.update({
-      where: { seatId },
-      data,
-    });
-  }
   async updateStatus(seatId: number, data: SeatDTO) {
-    const seat = await this.prismaService.seat.findUnique({
+    const seatById = await this.prismaService.seat.findUnique({
       where: { seatId },
     });
 
     return this.prismaService.seat.update({
       where: { seatId },
       data: {
-        roomId: seat.roomId ? seat.roomId : null,
-        screeningId: seat.screeningId,
-        seatNumber: seat.seatNumber,
-        rowCode: seat.rowCode ? seat.rowCode : null,
-        seatType: seat.seatType,
-        status: seat.status == 0 ? 1 : 0,
+        seatId: seatById.seatId,
+        roomId: seatById.roomId,
+        screeningId: seatById.screeningId,
+        seatNumber: seatById.seatNumber,
+        rowCode: seatById.rowCode,
+        seatType: seatById.seatType,
+        status: seatById.status == 0 ? 1 : 0,
+        userId: data && data.userId ? data.userId : null,
+      },
+    });
+  }
+
+  async findSeatsByUserId(userId: number) {
+    return await this.prismaService.seat.findMany({
+      where: { userId },
+      select: {
+        seatId: true,
+        seatNumber: true,
+        rowCode: true,
+      },
+    });
+  }
+
+  async findSeatsDoneByUserId(userId: number) {
+    return await this.prismaService.seat.findMany({
+      where: { userId, status: 2 },
+      select: {
+        seatId: true,
+        seatNumber: true,
+        rowCode: true,
+      },
+    });
+  }
+
+  async getAllSeatsByScreeningId(screeningId: number) {
+    return this.prismaService.seat.findMany({
+      where: { screeningId },
+    });
+  }
+
+  async updateStatusByUserIdToDefault(userId: number) {
+    return this.prismaService.seat.updateMany({
+      where: { userId, status: 1 },
+      data: {
+        status: 0,
+        userId: null,
       },
     });
   }

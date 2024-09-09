@@ -9,9 +9,8 @@ export class ChooseChairController {
     private readonly seatService: SeatService,
   ) {}
 
-  @Get('/:id')
-  async getAll(@Param('id') screeningId: string) {
-    // this.seatService.createSeatsForScreening(parseInt(screeningId));
-    return this.seatService.getAll();
+  @Get('/:screeningId')
+  async getAllSeatsByScreeningId(@Param('screeningId') screeningId: string) {
+    return this.seatService.getAllSeatsByScreeningId(Number(screeningId));
   }
 }
