@@ -17,6 +17,21 @@ export class ScreeningController {
   async getAll() {
     return this.screeningService.getAll();
   }
+  @Get('getByRoomId/:roomId')
+  async getByRoomId(@Param('roomId') roomId: string) {
+    const screenings = await this.screeningService.getScreeningByRoomId(
+      Number(roomId),
+    );
+    return screenings.map((screen) => ({
+      movieId: screen.movieId,
+      roomId: screen.roomId,
+      screeningId: screen.screeningId,
+      roomCode: screen.room.roomCode,
+      movieName: screen.movie.title,
+      startTime: screen.startTime,
+      endTime: screen.endTime,
+    }));
+  }
 
   @Post('create')
   async create(@Body() screeningDTO: any) {
