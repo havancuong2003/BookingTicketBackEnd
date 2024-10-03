@@ -66,6 +66,24 @@ export class EmailService {
       html: html,
     });
   }
+  async sendPaymentEmail(to: string, paymentInfor: any, paymentDetail: any[]) {
+    const context = {
+      supportEmail: process.env.EMAIL_USER,
+      companyName: 'Your Company Name',
+      movieTitle: paymentInfor?.movieTitle,
+      roomCode: paymentInfor?.roomCode,
+      cinemaName: paymentInfor?.cinemaName,
+      paymentDate: paymentInfor?.paymentDate,
+      totalAmount: paymentInfor?.totalAmount,
+      paymentId: paymentInfor?.paymentId,
+      paymentDetail,
+    };
 
-  // Remove the test methods and generateVerificationToken
+    const html = await this.compileTemplate('payment', context);
+    await this.mailerService.sendMail({
+      to: to,
+      subject: 'Payment Successful. Thank you for your purchase!',
+      html: html,
+    });
+  }
 }

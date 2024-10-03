@@ -22,6 +22,7 @@ import {
   BadRequestException,
   UsePipes,
   ValidationPipe,
+  Param,
 } from '@nestjs/common';
 
 import { Response, Request } from 'express';
@@ -35,6 +36,8 @@ import { UserDto } from 'src/user/dto/user.dto';
 import * as tokenService from '../utils';
 import { EmailService } from 'src/email/email.service';
 import * as argon from 'argon2';
+import { PaymentService } from 'src/payment';
+import { PaymentDetailService } from 'src/payment.detail';
 interface JwtPayload {
   id: number;
   email: string;
@@ -48,6 +51,8 @@ export class AuthController {
     private readonly userService: UserService,
     private readonly roleService: RoleService,
     private readonly emailService: EmailService,
+    private readonly paymentService: PaymentService,
+    private readonly paymentDetailService: PaymentDetailService,
   ) {
     if (!fs.existsSync(this.uploadDir)) {
       fs.mkdirSync(this.uploadDir, { recursive: true });
@@ -585,5 +590,41 @@ export class AuthController {
     } catch (error) {
       throw new UnauthorizedException('Invalid token');
     }
+  }
+
+  @Post('send-email-payment-success/:paymentId')
+  async handlePaymentSuccess(@Param('paymentId') paymentId: number) {
+    const paymentIn = await this.paymentService.getPaymentById(paymentId);
+    const userEmail = paymentIn.user.email;
+
+    const paymentD =
+      await this.paymentDetailService.getPaymentDetail(paymentId);
+    const paymentDetail = paymentD.map((detail) => ({
+      seatId: detail.seatId,
+      price: detail.price,
+      rowCode: detail.seat.rowCode,
+      seatNumber: detail.seat.seatNumber,
+    }));
+    const paymentInfor = {
+      paymentId: paymentIn.paymentId,
+      userId: paymentIn.userId,
+      screeningId: paymentIn.screeningId,
+      totalAmount: paymentIn.totalAmount,
+      paymentDate: paymentIn.paymentDate,
+      movieTitle: paymentIn.screening.movie.title,
+      status: paymentIn.status,
+      roomCode: paymentIn.paymentDetails[0]?.seat?.room?.roomCode,
+      cinemaName: paymentIn.paymentDetails[0]?.seat?.room?.cinema?.name,
+    };
+    await this.emailService.sendPaymentEmail(
+      userEmail,
+      paymentInfor,
+      paymentDetail,
+    );
+
+    return {
+      paymentInfor,
+      paymentDetail,
+    };
   }
 }

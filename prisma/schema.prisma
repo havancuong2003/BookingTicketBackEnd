@@ -36,6 +36,8 @@ model User{
   createdAt DateTime? @default(now())
   updatedAt DateTime? @updatedAt
   seats Seat[]
+  payments Payment[]
+   bookings Booking[]
 }
 
 model Movie {
@@ -52,6 +54,7 @@ model Movie {
   trailer    String?
   createdAt   DateTime? @default(now())
   updatedAt   DateTime? @updatedAt
+  screenings Screening[]
 }
 
 
@@ -62,9 +65,7 @@ model Cinema {
   totalScreens Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
   rooms Room[]
-  screenings  Screening[]
 }
 
 
@@ -84,30 +85,67 @@ model Room {
 model Screening {
   screeningId Int      @id @default(autoincrement())
   movieId     Int?
-  cinemaId    Int?
   roomId      Int?
   startTime   DateTime?
   endTime     DateTime?
   createdAt   DateTime? @default(now())
   updatedAt   DateTime? @updatedAt
-
-seats Seat[]
-  cinema      Cinema?    @relation(fields: [cinemaId], references: [cinemaId])
   room        Room?     @relation(fields: [roomId], references: [roomId])
+  movie       Movie?    @relation(fields: [movieId], references: [id])
+  bookings Booking[]
+  payments Payment[]
 }
 
 
 model Seat {
   seatId     Int     @id @default(autoincrement())
   roomId  Int?
-  screeningId  Int?
   seatNumber Int?     
   rowCode  String ? 
   seatType   Int ?  @default(0)
   status     Int ? @default(0)
   userId     Int ?
-
  user User? @relation(fields: [userId], references: [id])
-  screening  Screening? @relation(fields: [screeningId], references: [screeningId])
   room        Room?     @relation(fields: [roomId], references: [roomId])
+   bookings Booking[]
+   paymentDetails PaymentDetail[]
+}
+
+
+
+
+
+model Booking {
+  bookingId    Int       @id @default(autoincrement())
+  userId       Int?
+  screeningId  Int?
+  seatId       Int?
+  bookingDate  DateTime  @default(now())
+  status       Int ? @default(0)
+
+  user         User?   @relation(fields: [userId], references: [id])
+  screening    Screening ?@relation(fields: [screeningId], references: [screeningId])
+  seat         Seat    ?  @relation(fields: [seatId], references: [seatId])
+}
+
+
+model Payment {
+  paymentId      Int      @id @default(autoincrement())
+  userId         Int?
+  screeningId    Int?
+  totalAmount    Float?
+  paymentDate    DateTime? @default(now())
+  status         Int?
+  user           User?     @relation(fields: [userId], references: [id])
+  screening    Screening ?@relation(fields: [screeningId], references: [screeningId])
+  paymentDetails PaymentDetail[]
+}
+
+model PaymentDetail {
+  paymentDetailId          Int      @id @default(autoincrement())
+  paymentId   Int?
+  seatId      Int?
+  price       Float?
+  payment     Payment?  @relation(fields: [paymentId], references: [paymentId])
+  seat        Seat?     @relation(fields: [seatId], references: [seatId])
 }

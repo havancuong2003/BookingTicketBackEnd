@@ -26,6 +26,15 @@ import { SeatService } from './seat/seat.service';
 import { SeatModule } from './seat/seat.module';
 import { ChooseChairController } from './choose_chair/choose_chair.controller';
 import { ChooseChairModule } from './choose_chair/choose_chair.module';
+import { VnpayModule } from './vnpay/vnpay.module';
+import { BookingController } from './booking/booking.controller';
+import { BookingService } from './booking/booking.service';
+import { BookingModule } from './booking/booking.module';
+import { PaymentDetailController } from './payment.detail/payment.detail.controller';
+import { PaymentDetailService } from './payment.detail/payment.detail.service';
+import { PaymentDetailModule } from './payment.detail/payment.detail.module';
+import { PaymentModule } from './payment/payment.module';
+import { PaymentController, PaymentService } from './payment';
 
 @Module({
   imports: [
@@ -55,8 +64,19 @@ import { ChooseChairModule } from './choose_chair/choose_chair.module';
     ScreeningModule,
     SeatModule,
     ChooseChairModule,
+    VnpayModule,
+    BookingModule,
+    PaymentDetailModule,
+    PaymentModule,
   ],
-  controllers: [UserController, RoomController, ChooseChairController],
+  controllers: [
+    UserController,
+    RoomController,
+    ChooseChairController,
+    BookingController,
+    PaymentDetailController,
+    PaymentController,
+  ],
   providers: [
     PrismaService,
     CinemaService,
@@ -69,6 +89,9 @@ import { ChooseChairModule } from './choose_chair/choose_chair.module';
     AuthService,
     ChooseChairGateway,
     SeatService,
+    BookingService,
+    PaymentDetailService,
+    PaymentService,
   ],
 })
 export class AppModule implements NestModule {

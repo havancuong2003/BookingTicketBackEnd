@@ -25,6 +25,17 @@ export class RoomController {
     }));
   }
 
+  @Get('getByCinemaId/:id')
+  async getByCinemaId(@Param('id') cinemaId: string) {
+    const room = await this.roomService.getRoomByCinemaId(Number(cinemaId));
+    return (await room).map((room) => ({
+      roomId: room.roomId,
+      roomCode: room.roomCode,
+      cinemaId: room.cinemaId,
+      cinemaName: room.cinema.name,
+    }));
+  }
+
   @Post('create')
   async create(@Body() data: RoomDTO) {
     return this.roomService.create(data);
@@ -42,6 +53,12 @@ export class RoomController {
 
   @Get('details/:id')
   async findById(@Param('id') roomId: string) {
-    return this.roomService.findById(Number(roomId));
+    const room = await this.roomService.findById(Number(roomId));
+    return {
+      roomId: room.roomId,
+      roomCode: room.roomCode,
+      cinemaId: room.cinemaId,
+      cinemaName: room.cinema.name,
+    };
   }
 }

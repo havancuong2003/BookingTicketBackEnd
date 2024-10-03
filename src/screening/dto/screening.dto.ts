@@ -5,9 +5,6 @@ export class ScreeningDTO {
   movieId: number;
 
   @IsNumber()
-  cinemaId: number;
-
-  @IsNumber()
   roomId: number;
 
   @IsDateString()

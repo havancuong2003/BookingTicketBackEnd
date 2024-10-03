@@ -3,21 +3,42 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { ScreeningDTO } from './dto/screening.dto';
 import { format } from 'path';
 import { SeatService } from 'src/seat/seat.service';
+import { title } from 'process';
 
 @Injectable()
 export class ScreeningService {
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly seatService: SeatService,
+ 
   ) {}
 
   async getAll() {
     return this.prismaService.screening.findMany();
   }
 
+  async getScreeningByRoomId(roomId: number) {
+    return this.prismaService.screening.findMany({
+      include: {
+        movie: {
+          // Ensure 'movie' is a valid property in ScreeningInclude
+          select: {
+            title: true,
+          },
+        },
+
+        room: {
+          select: {
+            roomCode: true,
+          },
+        },
+      },
+      where: { roomId },
+    });
+  }
+
   async create(data: ScreeningDTO) {
     const screening = await this.prismaService.screening.create({ data });
-    await this.seatService.createSeatsForScreening(screening.screeningId);
+    // await this.seatService.createSeatsForScreening(screening.screeningId);
     return screening;
   }
 
@@ -50,9 +71,6 @@ export class ScreeningService {
     const screening = await this.prismaService.screening.findUnique({
       where: { screeningId },
       include: {
-        cinema: {
-          select: { name: true },
-        },
         room: {
           select: { roomCode: true },
         },
@@ -72,7 +90,6 @@ export class ScreeningService {
     });
 
     return {
-      cinemaName: screening.cinema?.name ?? '',
       movieName: movie?.title ?? '',
       duration: movie?.duration ?? 0,
       releaseDate: screening?.startTime

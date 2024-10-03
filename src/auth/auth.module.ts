@@ -10,6 +10,8 @@ import { EmailService } from 'src/email/email.service';
 import { UserDto } from 'src/user/dto/user.dto';
 import { JwtAuthGuard } from './strategy/jwt-auth.guard';
 import { JwtStrategy } from './strategy/jwt-strategy';
+import { PaymentDetailService } from 'src/payment.detail';
+import { PaymentService } from 'src/payment';
 
 @Module({
   imports: [
@@ -27,6 +29,8 @@ import { JwtStrategy } from './strategy/jwt-strategy';
     JwtService,
     EmailService,
     JwtStrategy,
+    PaymentService,
+    PaymentDetailService,
   ],
   controllers: [AuthController],
 })

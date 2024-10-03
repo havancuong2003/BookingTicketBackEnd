@@ -6,6 +6,8 @@ import { join } from 'path';
 import { AuthService } from 'src/auth/auth.service';
 import { UserService } from 'src/user/user.service';
 import { JwtService } from '@nestjs/jwt';
+import { PaymentService } from 'src/payment';
+import { PaymentDetailService } from 'src/payment.detail';
 
 @Module({
   imports: [
@@ -30,7 +32,14 @@ import { JwtService } from '@nestjs/jwt';
       },
     }),
   ],
-  providers: [EmailService, AuthService, UserService, JwtService],
+  providers: [
+    EmailService,
+    AuthService,
+    UserService,
+    JwtService,
+    PaymentService,
+    PaymentDetailService,
+  ],
   exports: [EmailService],
 })
 export class EmailModule {}

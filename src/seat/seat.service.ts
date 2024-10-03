@@ -28,7 +28,7 @@ export class SeatService {
       data,
     });
   }
-  async createSeatsForScreening(screeningId: number) {
+  async createSeatsForRoom(screeningId: number, roomId: number) {
     const rows = ['A', 'B', 'C', 'D', 'E', 'F'];
     const seats = [];
     const screening = await this.prismaService.screening.findUnique({
@@ -43,8 +43,7 @@ export class SeatService {
           seatNumber,
           seatType,
           status: 0,
-          screeningId,
-          roomId: screening.roomId,
+          roomId: roomId,
         };
         seats.push(seat);
       }
@@ -65,7 +64,6 @@ export class SeatService {
       data: {
         seatId: seatById.seatId,
         roomId: seatById.roomId,
-        screeningId: seatById.screeningId,
         seatNumber: seatById.seatNumber,
         rowCode: seatById.rowCode,
         seatType: seatById.seatType,
@@ -98,8 +96,12 @@ export class SeatService {
   }
 
   async getAllSeatsByScreeningId(screeningId: number) {
-    return this.prismaService.seat.findMany({
+    const screening = await this.prismaService.screening.findUnique({
       where: { screeningId },
+      select: { roomId: true },
+    });
+    return this.prismaService.seat.findMany({
+      where: { roomId: screening.roomId },
     });
   }
 

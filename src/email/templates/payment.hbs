@@ -1,0 +1,73 @@
+<html>
+  <head>
+    <meta charset='utf-8' />
+    <title>Payment Success</title>
+  </head>
+  <body
+    style='font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;'
+  >
+    <h1 style='color: #444;'>Payment Successful</h1>
+    <p>Hello,</p>
+    <p>Thank you for your payment! Here are the details of your transaction:
+    </p>
+    <p>Payment ID: {{paymentId}}</p>
+
+    <table style='width: 100%; border-collapse: collapse; margin: 20px 0;'>
+      <tr>
+        <th
+          style='background-color: #f2f2f2; padding: 10px; text-align: left;'
+        >Item</th>
+        <th
+          style='background-color: #f2f2f2; padding: 10px; text-align: left;'
+        >Details</th>
+      </tr>
+      <tr>
+        <td style='border: 1px solid #ddd; padding: 8px;'>Movie title</td>
+        <td style='border: 1px solid #ddd; padding: 8px;'>{{movieTitle}}</td>
+      </tr>
+      <tr>
+        <td style='border: 1px solid #ddd; padding: 8px;'>Room Code</td>
+        <td style='border: 1px solid #ddd; padding: 8px;'>{{roomCode}}</td>
+      </tr>
+      <tr>
+        <td style='border: 1px solid #ddd; padding: 8px;'>Cinema Name</td>
+        <td style='border: 1px solid #ddd; padding: 8px;'>{{cinemaName}}</td>
+      </tr>
+      <tr>
+        <td style='border: 1px solid #ddd; padding: 8px;'>Payment Date</td>
+        <td style='border: 1px solid #ddd; padding: 8px;'>{{paymentDate}}</td>
+      </tr>
+      <tr>
+        <td style='border: 1px solid #ddd; padding: 8px;'>Total Amount</td>
+        <td style='border: 1px solid #ddd; padding: 8px;'>{{totalAmount}}
+          VND</td>
+      </tr>
+    </table>
+
+    <h2 style='color: #444;'>Seats Booking</h2>
+    <table style='width: 100%; border-collapse: collapse; margin: 20px 0;'>
+      <tr>
+        <th
+          style='background-color: #f2f2f2; padding: 10px; text-align: left;'
+        >Seat Code</th>
+        <th
+          style='background-color: #f2f2f2; padding: 10px; text-align: left;'
+        >Price</th>
+      </tr>
+      {{#each paymentDetail}}
+        <tr>
+          <td
+            style='border: 1px solid #ddd; padding: 8px;'
+          >{{this.seatNumber}}{{this.rowCode}}</td>
+          <td style='border: 1px solid #ddd; padding: 8px;'>{{this.price}}
+            VND</td>
+        </tr>
+      {{/each}}
+    </table>
+
+    <p>If you have any questions, feel free to contact us at
+      <a href='mailto:{{supportEmail}}'>{{supportEmail}}</a>.</p>
+    <p>Thank you for choosing us!</p>
+    <p>Best regards,<br />CV Entertainment</p>
+  </body>
+</html>
