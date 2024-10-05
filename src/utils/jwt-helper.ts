@@ -47,14 +47,20 @@ export const verifyToken = (
 export const getTokenExpirationTime = (
   token: string,
   secret: string,
-): Promise<number> => {
+): Promise<{ exp: number; isExpired: boolean }> => {
   return new Promise((resolve, reject) => {
-    Jwt.verify(token, secret, (err, decoded) => {
-      if (err) {
+    Jwt.verify(token, secret, { ignoreExpiration: true }, (err, decoded) => {
+      if (err && err.name !== 'TokenExpiredError') {
         reject(err);
       } else {
         const payload = decoded as JwtPayload;
-        resolve(payload.exp || 0);
+        const now = Math.floor(Date.now() / 1000);
+        console.log('Current time:', new Date(now * 1000));
+        console.log('Token expiration:', new Date(payload.exp * 1000));
+        resolve({
+          exp: payload.exp || 0,
+          isExpired: (payload.exp || 0) < now,
+        });
       }
     });
   });
