@@ -103,7 +103,7 @@ model Seat {
   seatNumber Int?     
   rowCode  String ? 
   seatType   Int ?  @default(0)
-  seatType   Int ?  @default(0)
+
   status     Int ? @default(0)
   userId     Int ?
  user User? @relation(fields: [userId], references: [id])
@@ -150,3 +150,26 @@ model PaymentDetail {
   payment     Payment?  @relation(fields: [paymentId], references: [paymentId])
   seat        Seat?     @relation(fields: [seatId], references: [seatId])
 }
+
+model MenuItem {
+  id     Int      @id @default(autoincrement())  // ID tự động tăng
+  name   String   @db.VarChar(255)               // Tên món
+  type   MenuItemType                           // Loại (FOOD, DRINK)
+  price  Float                                   // Giá
+  image  String?  @db.VarChar(255)               // Đường dẫn hình ảnh (có thể để trống)
+  combos Combo[]                                // Nhiều combo có thể chứa MenuItem này
+}
+
+model Combo {
+  id      Int          @id @default(autoincrement())  // ID tự động tăng
+  name    String       @db.VarChar(255)               // Tên combo
+  price   Float                                       // Giá combo
+  image   String?      @db.VarChar(255)               // Đường dẫn hình ảnh (có thể để trống)
+  items   MenuItem[]                                  // Nhiều món ăn hoặc đồ uống
+}
+
+enum MenuItemType {
+  FOOD   // Đồ ăn
+  DRINK  // Đồ uống
+}
+
