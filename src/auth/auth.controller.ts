@@ -38,6 +38,7 @@ import { EmailService } from 'src/email/email.service';
 import * as argon from 'argon2';
 import { PaymentService } from 'src/payment';
 import { PaymentDetailService } from 'src/payment.detail';
+import { JwtAuthGuard } from './strategy/jwt-auth.guard';
 interface JwtPayload {
   id: number;
   email: string;
@@ -754,28 +755,6 @@ export class AuthController {
       role: user.role,
     };
   }
-  @Post('/getInfor')
-  async GetInforUser(@Req() req: Request) {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) {
-      throw new UnauthorizedException('No token provided');
-    }
-
-    try {
-      const decoded = await tokenService.verifyToken(
-        token,
-        process.env.ACCESS_TOKEN_SECRET,
-      );
-      return {
-        id: decoded.id,
-        email: decoded.email,
-        firstName: decoded.firstName,
-        role: decoded.role,
-      };
-    } catch (error) {
-      throw new UnauthorizedException('Invalid token');
-    }
-  }
 
   @Post('send-email-payment-success/:paymentId')
   async handlePaymentSuccess(@Param('paymentId') paymentId: number) {
@@ -811,5 +790,5 @@ export class AuthController {
       paymentInfor,
       paymentDetail,
     };
-  
+  }
 }
