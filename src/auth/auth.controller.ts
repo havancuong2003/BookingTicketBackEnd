@@ -1,5 +1,4 @@
-import { generateToken } from './../utils/jwt-helper';
-import { UserService } from './../user/user.service';
+import { UserService } from '../user/user.service';
 import { AuthService } from './auth.service';
 import { SignUpDto } from './dto';
 
@@ -12,7 +11,6 @@ import {
   Post,
   Req,
   Res,
-  Session,
   UnauthorizedException,
   UploadedFile,
   UseGuards,
@@ -20,8 +18,6 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
-  UsePipes,
-  ValidationPipe,
   Param,
 } from '@nestjs/common';
 

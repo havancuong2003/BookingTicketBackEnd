@@ -21,18 +21,7 @@ export class MenuService {
   }
 
   async createCombo(comboDto: ComboDto) {
-    console.log('comboDto', comboDto);
-
     const { name, price, image, items } = comboDto;
-
-    // Kiểm tra và kết nối items, đảm bảo từng item có id
-    const itemConnections = items.map((item: MenuDto) => {
-      if (item.id) {
-        // Kiểm tra nếu item.id tồn tại
-        return { id: item.id };
-      }
-      throw new Error('Item must have an id.'); // Ném lỗi nếu không có id
-    });
 
     const combo = await this.prisma.combo.create({
       data: {
@@ -40,15 +29,16 @@ export class MenuService {
         price,
         image,
         items: {
-          connect: itemConnections,
+          create: items.map((item) => ({
+            menuItemId: item.id, // ID của món ăn
+            quantity: item.quantity, // Số lượng của món ăn
+          })),
         },
       },
       include: {
-        items: true,
+        items: true, // Bao gồm thông tin về các món ăn trong combo
       },
     });
-
-    console.log('combo', combo);
 
     return combo;
   }
@@ -88,7 +78,15 @@ export class MenuService {
   }
 
   async getCombos() {
-    return await this.prisma.combo.findMany(); // Fetch all combos
+    return await this.prisma.combo.findMany({
+      include: {
+        items: {
+          include: {
+            menuItem: true, // Bao gồm thông tin về món ăn
+          },
+        },
+      },
+    });
   }
 
   async deleteMenuItem(id: number) {

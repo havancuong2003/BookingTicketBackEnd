@@ -25,4 +25,8 @@ export class MenuDto {
   @IsOptional()
   @IsString()
   image?: string; // URL ảnh, có thể là tuỳ chọn
+
+  @IsNotEmpty() // Đảm bảo quantity không được để trống
+  @IsNumber()
+  quantity: number; // Số lượng của món ăn
 }

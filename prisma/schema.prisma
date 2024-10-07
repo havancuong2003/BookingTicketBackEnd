@@ -103,7 +103,6 @@ model Seat {
   seatNumber Int?     
   rowCode  String ? 
   seatType   Int ?  @default(0)
-
   status     Int ? @default(0)
   userId     Int ?
  user User? @relation(fields: [userId], references: [id])
@@ -151,21 +150,32 @@ model PaymentDetail {
   seat        Seat?     @relation(fields: [seatId], references: [seatId])
 }
 
-model MenuItem {
-  id     Int      @id @default(autoincrement())  // ID tự động tăng
-  name   String   @db.VarChar(255)               // Tên món
-  type   MenuItemType                           // Loại (FOOD, DRINK)
-  price  Float                                   // Giá
-  image  String?  @db.VarChar(255)               // Đường dẫn hình ảnh (có thể để trống)
-  combos Combo[]                                // Nhiều combo có thể chứa MenuItem này
-}
-
 model Combo {
   id      Int          @id @default(autoincrement())  // ID tự động tăng
   name    String       @db.VarChar(255)               // Tên combo
   price   Float                                       // Giá combo
   image   String?      @db.VarChar(255)               // Đường dẫn hình ảnh (có thể để trống)
-  items   MenuItem[]                                  // Nhiều món ăn hoặc đồ uống
+  items   ComboItem[]                                  // Nhiều món ăn hoặc đồ uống với số lượng
+}
+
+model MenuItem {
+  id      Int          @id @default(autoincrement())  // ID tự động tăng
+  name    String       @db.VarChar(255)               // Tên món ăn
+  price   Float                                       // Giá món ăn
+  image   String?      @db.VarChar(255)               // Đường dẫn hình ảnh (có thể để trống)
+  quantity Int  @default(0)
+  type    MenuItemType 
+  combos  ComboItem[]                                  // Nhiều combo có món ăn này
+}
+
+model ComboItem {
+  id        Int      @id @default(autoincrement())    // ID tự động tăng
+  comboId   Int      // ID của combo
+  menuItemId Int      // ID của món ăn
+  quantity  Int      // Số lượng của món ăn trong combo
+
+  combo     Combo     @relation(fields: [comboId], references: [id])
+  menuItem  MenuItem  @relation(fields: [menuItemId], references: [id])
 }
 
 enum MenuItemType {
