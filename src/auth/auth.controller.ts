@@ -1,5 +1,4 @@
-import { generateToken } from './../utils/jwt-helper';
-import { UserService } from './../user/user.service';
+import { UserService } from '../user/user.service';
 import { AuthService } from './auth.service';
 import { SignUpDto } from './dto';
 
@@ -12,7 +11,6 @@ import {
   Post,
   Req,
   Res,
-  Session,
   UnauthorizedException,
   UploadedFile,
   UseGuards,
@@ -20,8 +18,6 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
-  UsePipes,
-  ValidationPipe,
   Param,
 } from '@nestjs/common';
 
@@ -38,6 +34,7 @@ import { EmailService } from 'src/email/email.service';
 import * as argon from 'argon2';
 import { PaymentService } from 'src/payment';
 import { PaymentDetailService } from 'src/payment.detail';
+import { JwtAuthGuard } from './strategy/jwt-auth.guard';
 interface JwtPayload {
   id: number;
   email: string;
@@ -71,7 +68,11 @@ export class AuthController {
   @UseGuards(GoogleOAuthGuard)
   async googleAuthRedirect(@Req() req, @Res() res: Response) {
     const user = req.user;
-
+    res.cookie('userGoogleToken', user.accessToken, {
+      httpOnly: true,
+      secure: false,
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
+    });
     const existingUser = await this.userService.findByEmail(user.email);
 
     if (existingUser) {
@@ -109,7 +110,7 @@ export class AuthController {
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: false,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        maxAge: 24 * 60 * 60 * 1000, // 1 day
       });
 
       res.cookie('accessToken', accessToken, {
@@ -588,8 +589,171 @@ export class AuthController {
         role: decoded.role,
       };
     } catch (error) {
-      throw new UnauthorizedException('Invalid token');
+      console.error('Error processing refresh token:', error);
+
+      if (error.name === 'TokenExpiredError') {
+        throw new UnauthorizedException({
+          statusCode: 401,
+          message: 'Refresh token expired',
+          error: 'EXPIRED_REFRESH_TOKEN',
+        });
+      }
+      if (error.name === 'JsonWebTokenError') {
+        throw new UnauthorizedException({
+          statusCode: 401,
+          message: 'Invalid refresh token',
+          error: 'INVALID_REFRESH_TOKEN',
+        });
+      }
+      throw new InternalServerErrorException({
+        statusCode: 500,
+        message: 'An error occurred while processing the token',
+        error: 'INTERNAL_SERVER_ERROR',
+      });
     }
+  }
+  @Post('test-re-generate-accesstoken')
+  async regenerateAccessToken(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const refreshToken = req.cookies.refreshToken;
+
+    if (!refreshToken) {
+      throw new UnauthorizedException({
+        statusCode: 401,
+        message: 'No refresh token provided',
+        error: 'MISSING_REFRESH_TOKEN',
+      });
+    }
+
+    try {
+      // Verify the refresh token
+      await tokenService.verifyToken(
+        refreshToken,
+        process.env.REFRESH_TOKEN_SECRET,
+      );
+      const newAccessToken =
+        await this.userService.refreshAccessToken(refreshToken);
+
+      // Set new access token in HTTP-only cookie
+      res.cookie('accessToken', newAccessToken, {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'strict',
+        maxAge: 1 * 60 * 1000, // 1 minutes
+      });
+
+      return {
+        statusCode: 200,
+        message: 'Access token has been refreshed',
+        accessToken: newAccessToken,
+      };
+    } catch (error) {
+      console.error('Error processing refresh token:', error);
+
+      if (error.name === 'TokenExpiredError') {
+        throw new UnauthorizedException({
+          statusCode: 401,
+          message: 'Refresh token expired',
+          error: 'EXPIRED_REFRESH_TOKEN',
+        });
+      }
+      if (error.name === 'JsonWebTokenError') {
+        throw new UnauthorizedException({
+          statusCode: 401,
+          message: 'Invalid refresh token',
+          error: 'INVALID_REFRESH_TOKEN',
+        });
+      }
+      throw new InternalServerErrorException({
+        statusCode: 500,
+        message: 'An error occurred while processing the token',
+        error: 'INTERNAL_SERVER_ERROR',
+      });
+    }
+  }
+  @Post('check-refresh-token-expiration')
+  async checkRefreshTokenExpiration(@Req() req: Request) {
+    const refreshToken = req.cookies.refreshToken;
+    console.log('Received refresh token:', refreshToken);
+
+    if (!refreshToken) {
+      throw new UnauthorizedException({
+        statusCode: 401,
+        message: 'No refresh token provided',
+        error: 'MISSING_REFRESH_TOKEN',
+      });
+    }
+
+    try {
+      const { exp, isExpired } = await tokenService.getTokenExpirationTime(
+        refreshToken,
+        process.env.REFRESH_TOKEN_SECRET,
+      );
+
+      const now = Math.floor(Date.now() / 1000);
+      const timeRemaining = exp - now;
+
+      return {
+        statusCode: 200,
+        message: 'Refresh token expiration details',
+        expirationTime: new Date(exp * 1000).toISOString(),
+        timeRemaining: isExpired ? 'Expired' : `${timeRemaining} seconds`,
+        isExpired: isExpired,
+      };
+    } catch (error) {
+      console.error('Error checking refresh token:', error);
+      if (error.name === 'TokenExpiredError') {
+        throw new UnauthorizedException({
+          statusCode: 401,
+          message: 'Refresh token has expired',
+          error: 'EXPIRED_REFRESH_TOKEN',
+        });
+      }
+      if (error.name === 'JsonWebTokenError') {
+        throw new UnauthorizedException({
+          statusCode: 401,
+          message: 'Invalid refresh token',
+          error: 'INVALID_REFRESH_TOKEN',
+        });
+      }
+      throw new InternalServerErrorException({
+        statusCode: 500,
+        message: 'An error occurred while processing the token',
+        error: 'INTERNAL_SERVER_ERROR',
+      });
+    }
+  }
+
+  @Get('test-auth')
+  @UseGuards(JwtAuthGuard)
+  async testAuth(@Req() req: Request) {
+    // JwtAuthGuard sẽ xử lý việc kiểm tra token
+    return {
+      statusCode: 200,
+      message: 'You are authenticated',
+    };
+  }
+
+  @Post('getInfor') // Sử dụng @Post
+  @UseGuards(JwtAuthGuard) // Sử dụng guard để xác thực token
+  async getInfor(@Req() req: Request) {
+    // Sử dụng type assertion để cho TypeScript biết rằng req có thuộc tính user
+    const user = (req as any).user; // Hoặc có thể sử dụng `req as { user: any }`
+
+    // Kiểm tra xem user có tồn tại không
+    if (!user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    console.log('User data:', user);
+    return {
+      id: user.userId,
+      email: user.email,
+      firstName: user.firstName,
+      role: user.role,
+    };
   }
 
   @Post('send-email-payment-success/:paymentId')

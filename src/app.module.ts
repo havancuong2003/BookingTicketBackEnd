@@ -35,6 +35,9 @@ import { PaymentDetailService } from './payment.detail/payment.detail.service';
 import { PaymentDetailModule } from './payment.detail/payment.detail.module';
 import { PaymentModule } from './payment/payment.module';
 import { PaymentController, PaymentService } from './payment';
+import { MenuController } from './menu/menu.controller';
+import { MenuModule } from './menu/menu.module';
+import { MenuService } from './menu/menu.service';
 
 @Module({
   imports: [
@@ -68,6 +71,7 @@ import { PaymentController, PaymentService } from './payment';
     BookingModule,
     PaymentDetailModule,
     PaymentModule,
+    MenuModule,
   ],
   controllers: [
     UserController,
@@ -76,6 +80,7 @@ import { PaymentController, PaymentService } from './payment';
     BookingController,
     PaymentDetailController,
     PaymentController,
+    MenuController,
   ],
   providers: [
     PrismaService,
@@ -92,6 +97,7 @@ import { PaymentController, PaymentService } from './payment';
     BookingService,
     PaymentDetailService,
     PaymentService,
+    MenuService,
   ],
 })
 export class AppModule implements NestModule {
