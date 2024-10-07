@@ -72,7 +72,11 @@ export class AuthController {
   @UseGuards(GoogleOAuthGuard)
   async googleAuthRedirect(@Req() req, @Res() res: Response) {
     const user = req.user;
-
+    res.cookie('userGoogleToken', user.accessToken, {
+      httpOnly: true,
+      secure: false,
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
+    });
     const existingUser = await this.userService.findByEmail(user.email);
 
     if (existingUser) {
@@ -110,7 +114,7 @@ export class AuthController {
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: false,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        maxAge: 24 * 60 * 60 * 1000, // 1 day
       });
 
       res.cookie('accessToken', accessToken, {
