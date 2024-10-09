@@ -100,4 +100,38 @@ export class MenuService {
       where: { id }, // Xóa combo theo id
     });
   }
+
+  async getFullInfoCombos() {
+    return await this.prisma.combo
+      .findMany({
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          image: true,
+          items: {
+            select: {
+              quantity: true,
+              menuItem: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      })
+      .then((combos) =>
+        combos.map((combo) => ({
+          id: combo.id,
+          name: combo.name,
+          price: combo.price,
+          image: combo.image,
+          items: combo.items.map((item) => ({
+            itemQuantity: item.quantity,
+            itemName: item.menuItem.name,
+          })),
+        })),
+      );
+  }
 }
