@@ -51,10 +51,27 @@ model Movie {
   status      MovieStatus?
   banner      String?
   duration    Int?
-  trailer    String?
+  trailer     String?
   createdAt   DateTime? @default(now())
   updatedAt   DateTime? @updatedAt
-  screenings Screening[]
+  screenings  Screening[]
+  types       MovieType[] // Mối quan hệ với Type thông qua MovieType
+}
+
+model Type {
+  id      Int      @id @default(autoincrement())
+  name    String   @unique
+  movies  MovieType[] // Mối quan hệ nhiều-nhiều với Movie
+}
+
+model MovieType {
+  movieId Int
+  typeId  Int
+
+  movie Movie @relation(fields: [movieId], references: [id])
+  type  Type  @relation(fields: [typeId], references: [id])
+
+  @@id([movieId, typeId]) // Đặt khóa chính cho mối quan hệ
 }
 
 enum MovieStatus {
@@ -189,4 +206,3 @@ enum MenuItemType {
   FOOD   // Đồ ăn
   DRINK  // Đồ uống
 }
-
