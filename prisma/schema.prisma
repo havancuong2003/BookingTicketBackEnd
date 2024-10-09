@@ -48,13 +48,20 @@ model Movie {
   actors      String?
   releaseDate DateTime?
   rating      Float?
-  status      String?
+  status      MovieStatus?
   banner      String?
   duration    Int?
   trailer    String?
   createdAt   DateTime? @default(now())
   updatedAt   DateTime? @updatedAt
   screenings Screening[]
+}
+
+enum MovieStatus {
+  COMING_SOON
+  NOW_SHOWING
+  ENDED
+  HIDDEN
 }
 
 

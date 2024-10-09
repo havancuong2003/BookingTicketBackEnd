@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsDate,
 } from 'class-validator';
+import { MovieStatus } from '@prisma/client'; // Import enum từ Prisma
 
 export class MovieDto {
   @IsString()
@@ -25,10 +26,12 @@ export class MovieDto {
   @IsNumber()
   rating: number;
 
-  @IsString()
-  status: string;
   @IsOptional()
-  banner: string;
+  status: MovieStatus = MovieStatus.HIDDEN; // Đặt trạng thái mặc định là HIDDEN
+
+  @IsOptional()
+  @IsString()
+  banner?: string;
 
   @IsOptional()
   @IsString()
