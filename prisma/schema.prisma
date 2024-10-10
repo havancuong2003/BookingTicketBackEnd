@@ -74,6 +74,7 @@ model MovieType {
   @@id([movieId, typeId]) // Đặt khóa chính cho mối quan hệ
 }
 
+
 enum MovieStatus {
   COMING_SOON
   NOW_SHOWING
