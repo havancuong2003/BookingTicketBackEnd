@@ -4,6 +4,8 @@ import {
   IsNumber,
   IsOptional,
   IsDate,
+  IsArray,
+  IsInt,
 } from 'class-validator';
 import { MovieStatus } from '@prisma/client'; // Import enum từ Prisma
 
@@ -39,4 +41,9 @@ export class MovieDto {
 
   @IsNumber()
   duration: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true }) // Kiểm tra từng phần tử trong mảng là số nguyên
+  types?: string[]; // Mảng ID của các loại phim
 }
