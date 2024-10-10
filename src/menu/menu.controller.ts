@@ -54,4 +54,8 @@ export class MenuController {
   async deleteCombo(@Param('id') id: number) {
     return await this.menuService.deleteCombo(id); // Gọi service để xóa combo
   }
+  @Get('full-info-combos')
+  getFullInfoCombos() {
+    return this.menuService.getFullInfoCombos(); // Call service method to get combos
+  }
 }

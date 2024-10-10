@@ -26,7 +26,7 @@ export class EmailService {
       'templates',
       `${templateName}.hbs`,
     );
-    console.log('Template path:', templatePath); // Thêm log này để kiểm tra đường dẫn
+    console.log('Template path:', templatePath);
     const templateContent = await fs.promises.readFile(templatePath, 'utf8');
     const template = Handlebars.compile(templateContent);
     return template(context);

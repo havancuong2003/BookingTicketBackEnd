@@ -8,18 +8,30 @@ export class PaymentService {
 
   async createPayment(data: PaymentDto) {
     try {
+      // Bước 1: Tạo Payment
       const payment = await this.prisma.payment.create({
         data: {
-          ...data,
+          userId: data.userId,
+          screeningId: data.screeningId,
+          totalAmount: data.totalAmount,
+          status: data.status,
           paymentDetails: {
             create: data.paymentDetails.map((detail) => ({
               seatId: detail.seatId,
               price: detail.price,
             })),
           },
+          bookingCombos: {
+            create: data.bookingCombos.map((bookingCombo) => ({
+              comboId: bookingCombo.comboId,
+              quantity: bookingCombo.quantity,
+              // paymentId sẽ tự động gán sau khi tạo Payment
+            })),
+          },
         },
       });
-      return payment;
+
+      return payment; // Trả về payment đã tạo
     } catch (error) {
       console.error('Error creating payment:', error); // Log lỗi
       throw new Error('Failed to create payment');

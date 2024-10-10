@@ -7,10 +7,7 @@ import { title } from 'process';
 
 @Injectable()
 export class ScreeningService {
-  constructor(
-    private readonly prismaService: PrismaService,
- 
-  ) {}
+  constructor(private readonly prismaService: PrismaService) {}
 
   async getAll() {
     return this.prismaService.screening.findMany();
@@ -72,7 +69,12 @@ export class ScreeningService {
       where: { screeningId },
       include: {
         room: {
-          select: { roomCode: true },
+          select: {
+            roomCode: true,
+            cinema: {
+              select: { name: true },
+            },
+          },
         },
       },
     });
@@ -99,6 +101,7 @@ export class ScreeningService {
         ? this.formatTime(screening.startTime)
         : '',
       roomCode: screening.room?.roomCode ?? '',
+      cinemaName: screening.room?.cinema?.name ?? '',
     };
   }
 
