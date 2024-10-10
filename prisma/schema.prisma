@@ -146,6 +146,7 @@ model Payment {
   user           User?     @relation(fields: [userId], references: [id])
   screening    Screening ?@relation(fields: [screeningId], references: [screeningId])
   paymentDetails PaymentDetail[]
+  bookingCombos BookingCombo[]
 }
 
 model PaymentDetail {
@@ -155,6 +156,7 @@ model PaymentDetail {
   price       Float?
   payment     Payment?  @relation(fields: [paymentId], references: [paymentId])
   seat        Seat?     @relation(fields: [seatId], references: [seatId])
+
 }
 
 model Combo {
@@ -163,6 +165,7 @@ model Combo {
   price   Float                                       // Giá combo
   image   String?      @db.VarChar(255)               // Đường dẫn hình ảnh (có thể để trống)
   items   ComboItem[]                                  // Nhiều món ăn hoặc đồ uống với số lượng
+  bookingCombos BookingCombo[]
 }
 
 model MenuItem {
@@ -188,5 +191,15 @@ model ComboItem {
 enum MenuItemType {
   FOOD   // Đồ ăn
   DRINK  // Đồ uống
+}
+model BookingCombo {
+  bookingComboId        Int      @id @default(autoincrement()) 
+  paymentId   Int?
+  comboId   Int      // ID của combo
+  quantity  Int      // Số lượng của combo
+
+  combo     Combo    @relation(fields: [comboId], references: [id])
+  payment Payment?  @relation(fields: [paymentId], references: [paymentId])
+ 
 }
 

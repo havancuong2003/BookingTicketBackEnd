@@ -38,6 +38,8 @@ import { PaymentController, PaymentService } from './payment';
 import { MenuController } from './menu/menu.controller';
 import { MenuModule } from './menu/menu.module';
 import { MenuService } from './menu/menu.service';
+import { BookingcomboService } from './bookingcombo/bookingcombo.service';
+import { BookingcomboModule } from './bookingcombo/bookingcombo.module';
 
 @Module({
   imports: [
@@ -72,6 +74,7 @@ import { MenuService } from './menu/menu.service';
     PaymentDetailModule,
     PaymentModule,
     MenuModule,
+    BookingcomboModule,
   ],
   controllers: [
     UserController,
@@ -98,6 +101,7 @@ import { MenuService } from './menu/menu.service';
     PaymentDetailService,
     PaymentService,
     MenuService,
+    BookingcomboService,
   ],
 })
 export class AppModule implements NestModule {
